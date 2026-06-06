@@ -2,6 +2,7 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tsConfigPaths from 'vite-tsconfig-paths';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   server: {
@@ -11,6 +12,7 @@ export default defineConfig({
     dedupe: ['react', 'react-dom', '@tanstack/react-query'],
   },
   plugins: [
+    tailwindcss(),
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),

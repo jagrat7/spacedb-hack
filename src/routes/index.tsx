@@ -8,6 +8,19 @@ import {
   useSpacetimeDBQuery,
 } from 'spacetimedb/tanstack';
 import type { Message, User } from '../module_bindings/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardAction,
+} from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 type PrettyMessage = {
   senderName: string;
@@ -89,9 +102,10 @@ function App() {
     for (const user of onlineUsers) {
       const userKey = user.identity.toHexString();
       if (!knownOnlineUsers.has(userKey)) {
-        setSystemMessages(previousMessages => [
-          ...previousMessages,
+        setSystemMessages(prev => [
+          ...prev,
           {
+            id: 0n,
             sender: Identity.zero(),
             sent: Timestamp.now(),
             text: `${displayNameByUser(user)} has connected.`,
@@ -107,9 +121,10 @@ function App() {
         );
         const userName =
           offlineUser?.name ?? offlineUser?.identity.toHexString().substring(0, 8);
-        setSystemMessages(previousMessages => [
-          ...previousMessages,
+        setSystemMessages(prev => [
+          ...prev,
           {
+            id: 0n,
             sender: Identity.zero(),
             sent: Timestamp.now(),
             text: `${userName ?? userKey.substring(0, 8)} has disconnected.`,
@@ -139,141 +154,194 @@ function App() {
 
   if (!connected || !identity) {
     return (
-      <main className="chat-loading">
-        <section className="chat-card chat-panel">
-          <h1>Connecting to SpacetimeDB...</h1>
-        </section>
-      </main>
+      <div className="grid min-h-screen place-items-center p-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Connecting to SpacetimeDB...</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <main className="chat-shell">
-      <section className="chat-card chat-profile">
-        <h1 className="chat-profile-title">Profile</h1>
-        {!settingName ? (
-          <>
-            <span className="chat-profile-name">{currentName}</span>
-            <button
-              type="button"
-              onClick={() => {
-                setSettingName(true);
-                setNewName(currentName);
-              }}
-            >
-              Edit Name
-            </button>
-          </>
-        ) : (
-          <form className="chat-profile-form" onSubmit={onSubmitNewName}>
-            <input
-              aria-label="username input"
-              value={newName}
-              onChange={event => setNewName(event.target.value)}
-              placeholder="Enter your display name"
-            />
-            <button type="submit" disabled={!newName.trim()}>
-              Submit
-            </button>
-          </form>
-        )}
-      </section>
+    <div
+      className="grid min-h-screen gap-4 p-4 mx-auto w-full max-w-5xl"
+      style={{
+        gridTemplateColumns: 'minmax(0, 1fr) 18rem',
+        gridTemplateRows: 'auto minmax(0, 1fr) auto',
+      }}
+    >
+      {/* Profile — spans both columns */}
+      <Card className="[grid-column:1/-1] flex-row items-center gap-4 py-0">
+        <CardContent className="flex flex-1 items-center gap-4 py-3">
+          <span className="font-heading text-base font-medium mr-auto">Profile</span>
+          {!settingName ? (
+            <>
+              <span className="text-muted-foreground font-semibold text-sm">
+                {currentName}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSettingName(true);
+                  setNewName(currentName);
+                }}
+              >
+                Edit Name
+              </Button>
+            </>
+          ) : (
+            <form className="flex items-center gap-3 w-full max-w-sm" onSubmit={onSubmitNewName}>
+              <Input
+                aria-label="username input"
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                placeholder="Enter your display name"
+              />
+              <Button type="submit" size="sm" disabled={!newName.trim()}>
+                Save
+              </Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
 
-      <section className="chat-card chat-panel">
-        <div className="chat-title-row">
-          <h1>Messages</h1>
-          <span className="chat-status" data-active={connected}>
-            {connected ? 'Connected' : 'Disconnected'}
-          </span>
-        </div>
-        {prettyMessages.length < 1 ? (
-          <p className="chat-empty">No messages yet</p>
-        ) : (
-          <div className="chat-messages">
-            {prettyMessages.map((message, index) => {
-              const sentDate = message.sent.toDate();
-              const now = new Date();
-              const isOlderThanDay =
-                now.getFullYear() !== sentDate.getFullYear() ||
-                now.getMonth() !== sentDate.getMonth() ||
-                now.getDate() !== sentDate.getDate();
-              const timeString = sentDate.toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              });
-              const dateString = isOlderThanDay
-                ? `${sentDate.toLocaleDateString([], {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })} `
-                : '';
+      {/* Messages panel */}
+      <Card className="flex flex-col min-h-0 overflow-hidden">
+        <CardHeader className="shrink-0">
+          <CardTitle>Messages</CardTitle>
+          <CardAction>
+            <Badge variant={connected ? 'default' : 'outline'}>
+              {connected ? 'Connected' : 'Disconnected'}
+            </Badge>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="flex-1 min-h-0 p-0">
+          <ScrollArea className="h-full px-4 pb-4">
+            {prettyMessages.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No messages yet</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {prettyMessages.map((message, index) => {
+                  const sentDate = message.sent.toDate();
+                  const now = new Date();
+                  const isOlderThanDay =
+                    now.getFullYear() !== sentDate.getFullYear() ||
+                    now.getMonth() !== sentDate.getMonth() ||
+                    now.getDate() !== sentDate.getDate();
+                  const timeString = sentDate.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  });
+                  const dateString = isOlderThanDay
+                    ? `${sentDate.toLocaleDateString([], {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })} `
+                    : '';
 
-              return (
-                <article
-                  className="chat-message"
-                  data-kind={message.kind}
-                  key={`${message.sent.toISOString()}-${index}`}
-                >
-                  <div className="chat-message-header">
-                    <span className="chat-message-author">
-                      {message.kind === 'system' ? 'System' : message.senderName}
-                    </span>
-                    <span className="chat-message-time">
-                      {dateString}
-                      {timeString}
-                    </span>
-                  </div>
-                  <p className="chat-message-text">{message.text}</p>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      <aside className="chat-card chat-sidebar">
-        <section className="chat-users-section">
-          <h2>Online</h2>
-          <div className="chat-users">
-            {onlineUsers.map(user => (
-              <div className="chat-user" key={user.identity.toHexString()}>
-                {displayNameByUser(user)}
+                  return (
+                    <article
+                      key={`${message.sent.toISOString()}-${index}`}
+                      className={cn(
+                        'rounded-xl px-4 py-3',
+                        message.kind === 'system'
+                          ? 'bg-primary text-primary-foreground italic'
+                          : 'bg-muted'
+                      )}
+                    >
+                      <div className="flex items-baseline gap-2 mb-1">
+                        <span className="font-bold text-sm">
+                          {message.kind === 'system' ? 'System' : message.senderName}
+                        </span>
+                        <span
+                          className={cn(
+                            'text-xs',
+                            message.kind === 'system'
+                              ? 'text-primary-foreground/75'
+                              : 'text-muted-foreground'
+                          )}
+                        >
+                          {dateString}{timeString}
+                        </span>
+                      </div>
+                      <p className="m-0 text-sm whitespace-pre-wrap break-words">
+                        {message.text}
+                      </p>
+                    </article>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        </section>
-        {offlineUsers.length > 0 && (
-          <section className="chat-users-section">
-            <h2>Offline</h2>
-            <div className="chat-users">
-              {offlineUsers.map(user => (
-                <div className="chat-user" key={user.identity.toHexString()}>
-                  {displayNameByUser(user)}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-      </aside>
+            )}
+          </ScrollArea>
+        </CardContent>
+      </Card>
 
-      <section className="chat-card chat-composer">
-        <form className="chat-composer-form" onSubmit={onSubmitMessage}>
-          <h2>New Message</h2>
-          <textarea
-            aria-label="message input"
-            value={newMessage}
-            onChange={event => setNewMessage(event.target.value)}
-            placeholder="Type a message..."
-            rows={4}
-          />
-          <div className="chat-composer-actions">
-            <button type="submit" disabled={!newMessage.trim() || !connected}>
-              Send
-            </button>
-          </div>
-        </form>
-      </section>
-    </main>
+      {/* User sidebar */}
+      <Card className="min-h-0 overflow-hidden">
+        <CardContent className="h-full p-0">
+          <ScrollArea className="h-full px-4 py-4">
+            <section>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                Online
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {onlineUsers.map(user => (
+                  <div
+                    key={user.identity.toHexString()}
+                    className="rounded-lg bg-muted px-3 py-2 text-sm font-medium"
+                  >
+                    {displayNameByUser(user)}
+                  </div>
+                ))}
+              </div>
+            </section>
+            {offlineUsers.length > 0 && (
+              <section className="mt-5">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Offline
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {offlineUsers.map(user => (
+                    <div
+                      key={user.identity.toHexString()}
+                      className="rounded-lg bg-muted/50 px-3 py-2 text-sm font-medium text-muted-foreground"
+                    >
+                      {displayNameByUser(user)}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Composer — spans both columns */}
+      <Card className="[grid-column:1/-1]">
+        <CardHeader>
+          <CardTitle>New Message</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="flex flex-col gap-3" onSubmit={onSubmitMessage}>
+            <Textarea
+              aria-label="message input"
+              value={newMessage}
+              onChange={e => setNewMessage(e.target.value)}
+              placeholder="Type a message..."
+              rows={3}
+            />
+            <div className="flex justify-end">
+              <Button type="submit" disabled={!newMessage.trim() || !connected}>
+                Send
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
