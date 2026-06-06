@@ -9,6 +9,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { QueryClient } from '@tanstack/react-query';
 import { Providers } from '../providers';
+import { SceneDecor } from '../components/cozy';
 import '../styles.css';
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
@@ -31,6 +32,11 @@ function RootComponent() {
         <HeadContent />
       </head>
       <body>
+        {/* cozy scene backdrop */}
+        <div className="scene" />
+        <div className="hills" />
+        <div className="meadow" />
+        <SceneDecor />
         <Providers>
           <Outlet />
         </Providers>

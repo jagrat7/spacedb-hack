@@ -1,43 +1,56 @@
+@import url("https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,600&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* --- cozy palette --- */
+  --parch:  #F7E8C4;
+  --parch2: #FBF3DA;
+  --wood:   #3A2C22;
+  --wood2:  #6A5240;
+  --gold:   #EBA63A;
+  --goldd:  #C77F22;
+  --goldl:  #F8CE6E;
+  --sage:   #82C58C;
+  --saged:  #4E9E63;
+  --pink:   #E597B0;
+
+  /* --- shadcn semantic tokens mapped to the cozy palette --- */
+  --background: #F7E8C4;
+  --foreground: #3A2C22;
+  --card: #F7E8C4;
+  --card-foreground: #3A2C22;
+  --popover: #FBF3DA;
+  --popover-foreground: #3A2C22;
+  --primary: #EBA63A;
+  --primary-foreground: #3A2C22;
+  --secondary: #82C58C;
+  --secondary-foreground: #3A2C22;
+  --muted: #FBF3DA;
+  --muted-foreground: #6A5240;
+  --accent: #F8CE6E;
+  --accent-foreground: #3A2C22;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --border: #3A2C22;
+  --input: #3A2C22;
+  --ring: #EBA63A;
+  --chart-1: #EBA63A;
+  --chart-2: #82C58C;
+  --chart-3: #E597B0;
+  --chart-4: #C77F22;
+  --chart-5: #4E9E63;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #FBF3DA;
+  --sidebar-foreground: #3A2C22;
+  --sidebar-primary: #EBA63A;
+  --sidebar-primary-foreground: #3A2C22;
+  --sidebar-accent: #F8CE6E;
+  --sidebar-accent-foreground: #3A2C22;
+  --sidebar-border: #3A2C22;
+  --sidebar-ring: #EBA63A;
 }
 
 .dark {
@@ -75,8 +88,20 @@
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-heading: 'Pixelify Sans', system-ui, sans-serif;
+  --font-sans: 'Nunito', system-ui, sans-serif;
+  --font-pixel: 'Pixelify Sans', system-ui, sans-serif;
+  /* cozy palette as utilities (text-wood, bg-parch, border-gold, …) */
+  --color-parch: var(--parch);
+  --color-parch2: var(--parch2);
+  --color-wood: var(--wood);
+  --color-wood2: var(--wood2);
+  --color-gold: var(--gold);
+  --color-goldd: var(--goldd);
+  --color-goldl: var(--goldl);
+  --color-sage: var(--sage);
+  --color-saged: var(--saged);
+  --color-pink: var(--pink);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -119,12 +144,327 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: #2a2018;
+    -webkit-font-smoothing: antialiased;
   }
   html {
     @apply font-sans;
   }
+  ::selection {
+    background: rgba(235, 166, 58, 0.4);
+  }
 }
+
+/* ====================================================================
+   Cozy RPG theme — scene backdrop, pixel frames, and game animations
+   ==================================================================== */
+
+.font-pixel {
+  font-family: 'Pixelify Sans', system-ui, sans-serif;
+}
+.tabnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- cozy scene backdrop: blue sky → sunset → green countryside ---- */
+.scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(820px 420px at 80% -4%, rgba(255, 226, 150, 0.85), transparent 62%),
+    linear-gradient(
+      180deg,
+      #7fb8dd 0%,
+      #a7d3e6 16%,
+      #e9ddc0 38%,
+      #f4d79e 50%,
+      #f0cc86 60%,
+      #cfe0a0 74%,
+      #9cce86 88%,
+      #84c47e 100%
+    );
+}
+.scene::before {
+  /* sun */
+  content: "";
+  position: absolute;
+  top: -90px;
+  right: 6%;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff3c4 0 28%, rgba(255, 238, 170, 0.85) 42%, rgba(248, 206, 110, 0) 70%);
+}
+.scene::after {
+  /* drifting clouds */
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.7;
+  background-image:
+    radial-gradient(60px 26px at 16% 14%, rgba(255, 255, 255, 0.85), transparent 70%),
+    radial-gradient(90px 34px at 22% 12%, rgba(255, 255, 255, 0.8), transparent 72%),
+    radial-gradient(70px 28px at 70% 9%, rgba(255, 255, 255, 0.7), transparent 70%),
+    radial-gradient(50px 22px at 46% 20%, rgba(255, 255, 255, 0.6), transparent 72%);
+  animation: drift 60s linear infinite;
+}
+@keyframes drift {
+  from { background-position: 0 0, 0 0, 0 0, 0 0; }
+  to { background-position: 220px 0, 320px 0, -260px 0, 180px 0; }
+}
+
+/* layered rolling hills */
+.hills {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46vh;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 18% 100%, #8fcf8a 0 42%, transparent 44%),
+    radial-gradient(120% 90% at 78% 100%, #79c079 0 40%, transparent 42%),
+    radial-gradient(140% 80% at 50% 100%, #69b56f 0 36%, transparent 38%),
+    linear-gradient(180deg, transparent 30%, rgba(78, 158, 99, 0.45));
+  opacity: 0.85;
+}
+/* sunlit meadow strip with scattered blossoms along the very bottom */
+.meadow {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 16vh;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(5px 5px at 6% 70%, #f6c4d4 0 60%, transparent 62%),
+    radial-gradient(4px 4px at 13% 84%, #fff1a8 0 60%, transparent 62%),
+    radial-gradient(5px 5px at 24% 64%, #e597b0 0 60%, transparent 62%),
+    radial-gradient(4px 4px at 33% 88%, #fff1a8 0 60%, transparent 62%),
+    radial-gradient(5px 5px at 44% 72%, #c6e4f0 0 60%, transparent 62%),
+    radial-gradient(5px 5px at 58% 84%, #f6c4d4 0 60%, transparent 62%),
+    radial-gradient(4px 4px at 69% 66%, #fff1a8 0 60%, transparent 62%),
+    radial-gradient(5px 5px at 82% 82%, #e597b0 0 60%, transparent 62%),
+    radial-gradient(4px 4px at 92% 70%, #c6e4f0 0 60%, transparent 62%),
+    repeating-linear-gradient(92deg, #6fb56e 0 5px, #66ad66 5px 9px),
+    linear-gradient(180deg, rgba(120, 190, 110, 0) 0%, #6fb56e 38%, #5ba35f 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 34%);
+  mask-image: linear-gradient(180deg, transparent, #000 34%);
+}
+/* container for SVG scene props (trees, bushes, flowers, vines) */
+.scene-decor {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* floating sparkles */
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  50% { transform: translateY(-12px); opacity: 1; }
+}
+.spark {
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  animation: floaty 4s ease-in-out infinite;
+}
+
+/* ---- pixel frame (9-slice look) ---- */
+.frame {
+  position: relative;
+  background: var(--frame-bg, var(--parch));
+  border: 4px solid var(--wood);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 0 0 4px var(--goldl),
+    inset 0 0 0 5px rgba(255, 255, 255, 0.35),
+    0 8px 0 0 #2A1F18,
+    0 8px 0 4px var(--wood);
+}
+.frame-plain {
+  background: var(--frame-bg, var(--parch2));
+  border: 3px solid var(--wood);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.4),
+    0 4px 0 0 var(--wood);
+}
+
+/* message pop */
+@keyframes pop {
+  0% { transform: translateY(10px) scale(0.96); }
+  60% { transform: translateY(-2px) scale(1.01); }
+  100% { transform: translateY(0) scale(1); }
+}
+.pop { animation: pop 0.34s cubic-bezier(0.3, 1.4, 0.5, 1) forwards; }
+
+/* live blink */
+@keyframes blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.86); }
+}
+.blink { animation: blink 1s steps(2, end) infinite; }
+
+/* typing dots */
+@keyframes tb {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-5px); opacity: 1; }
+}
+.tdot { animation: tb 1s infinite steps(3, end); }
+
+/* card reveal */
+@keyframes riseIn {
+  from { transform: translateY(16px); }
+  to { transform: translateY(0); }
+}
+.rise { animation: riseIn 0.5s cubic-bezier(0.2, 1, 0.36, 1) forwards; }
+
+/* bob */
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.bob { animation: bob 2.4s ease-in-out infinite; }
+
+/* slide up */
+@keyframes slideUp {
+  from { transform: translateY(16px); }
+  to { transform: translateY(0); }
+}
+.slide-up { animation: slideUp 0.38s cubic-bezier(0.2, 1, 0.36, 1) forwards; }
+
+/* chunky buttons — press effect */
+.btn3d { transition: transform 0.06s, box-shadow 0.06s; }
+.btn3d:active { transform: translateY(4px); }
+
+/* cozy scrollbar */
+.cscroll::-webkit-scrollbar { width: 10px; }
+.cscroll::-webkit-scrollbar-thumb {
+  background: #c9a86a;
+  border: 2px solid var(--wood);
+  border-radius: 0;
+}
+.cscroll::-webkit-scrollbar-track { background: #e7d5a8; }
+
+/* ====================================================================
+   Layered village panels — wood planks, parchment scrolls, quest cards
+   ==================================================================== */
+
+/* chunky honey-wood plank panel (light, warm) */
+.wood-panel {
+  position: relative;
+  color: var(--wood);
+  border: 4px solid #b5894f;
+  border-radius: 12px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.18) 0 2px, transparent 2px 6px),
+    repeating-linear-gradient(90deg, rgba(150, 105, 45, 0.14) 0 1.5px, transparent 1.5px 4px, rgba(150, 105, 45, 0.12) 64px 66px),
+    linear-gradient(180deg, #f8e1a8 0%, #eecb85 52%, #e2b96f 100%);
+  box-shadow:
+    inset 0 0 0 3px #f6e3b0,
+    inset 0 0 0 4px rgba(255, 255, 255, 0.5),
+    inset 0 2px 6px rgba(255, 255, 255, 0.45),
+    inset 0 -10px 22px rgba(170, 120, 45, 0.22),
+    0 6px 0 0 #c79a57,
+    0 9px 18px rgba(90, 60, 20, 0.25);
+}
+
+/* parchment scroll panel with torn/rolled edges */
+.scroll-panel {
+  position: relative;
+  border-radius: 10px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.5), transparent 60%),
+    radial-gradient(100% 120% at 50% 120%, rgba(150, 110, 60, 0.18), transparent 60%),
+    linear-gradient(180deg, #fbf0d2, #f3e0b4);
+  border: 3px solid #b89a63;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.55),
+    inset 0 0 26px rgba(170, 130, 70, 0.25),
+    0 5px 0 rgba(120, 90, 50, 0.45),
+    0 8px 18px rgba(0, 0, 0, 0.22);
+}
+.scroll-panel::before,
+.scroll-panel::after {
+  /* rolled ends */
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  height: 12px;
+  background: linear-gradient(180deg, #d8b97e, #b78c4f);
+  border: 3px solid #8a663a;
+  border-radius: 8px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45);
+}
+.scroll-panel::before { top: -8px; }
+.scroll-panel::after { bottom: -8px; }
+
+/* nested quest card on the board */
+.quest-card {
+  position: relative;
+  border-radius: 10px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, #fff7e2, #f6e6bf 70%);
+  border: 3px solid var(--wood);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.5),
+    inset 0 -8px 16px rgba(150, 110, 60, 0.18),
+    0 4px 0 #2A1F18;
+}
+.quest-card.selected {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.6),
+    0 0 0 3px var(--goldd),
+    0 0 18px rgba(235, 166, 58, 0.45),
+    0 4px 0 #2A1F18;
+}
+
+/* pinned paper note look (nail/pin dot top-center) */
+.pinned::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff9aa6, #c0394a 70%);
+  border: 2px solid #6e1f2a;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+}
+
+/* gentle sway for vines / hanging decor */
+@keyframes sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+.sway { transform-origin: top center; animation: sway 5s ease-in-out infinite; }
+
+/* grow-in pop for blossoms */
+@keyframes grow {
+  0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+  70% { transform: scale(1.15) rotate(6deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.grow { animation: grow 0.5s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
+
+/* slow wind wobble for trees/bushes */
+@keyframes wind {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50% { transform: rotate(1.2deg); }
+}
+.wind { transform-origin: bottom center; animation: wind 6s ease-in-out infinite; }
