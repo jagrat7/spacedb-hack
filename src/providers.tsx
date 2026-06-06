@@ -72,7 +72,7 @@ const onConnectError = (_ctx: ErrorContext, err: Error) =>
 
 function FullScreen({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid min-h-screen place-items-center p-6 text-center">
+    <div className="relative z-10 grid min-h-screen place-items-center p-6 text-center">
       <div className="flex flex-col items-center gap-4 max-w-sm">{children}</div>
     </div>
   );
