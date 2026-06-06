@@ -33,7 +33,7 @@ const oidcConfig: AuthProviderProps = {
   client_id: CLIENT_ID,
   redirect_uri: typeof window !== 'undefined' ? `${window.location.origin}/` : '',
   post_logout_redirect_uri:
-    typeof window !== 'undefined' ? window.location.origin : '',
+    typeof window !== 'undefined' ? `${window.location.origin}/` : '',
   scope: 'openid profile email',
   response_type: 'code',
   automaticSilentRenew: true,
