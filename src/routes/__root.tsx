@@ -8,6 +8,8 @@ import {
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { QueryClient } from '@tanstack/react-query';
+import { OverlapProvider } from '../lib/overlap/store';
+import { SceneDecor } from '../components/cozy';
 import '../styles.css';
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
@@ -30,7 +32,14 @@ function RootComponent() {
         <HeadContent />
       </head>
       <body>
-        <Outlet />
+        {/* cozy scene backdrop */}
+        <div className="scene" />
+        <div className="hills" />
+        <div className="meadow" />
+        <SceneDecor />
+        <OverlapProvider>
+          <Outlet />
+        </OverlapProvider>
         <ReactQueryDevtools
           initialIsOpen={false}
           buttonPosition="bottom-left"
