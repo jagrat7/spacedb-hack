@@ -39,6 +39,7 @@ import BeginMatchReducer from "./begin_match_reducer";
 import CompleteMatchReducer from "./complete_match_reducer";
 import FailMatchReducer from "./fail_match_reducer";
 import JoinEventReducer from "./join_event_reducer";
+import SendChatMessageReducer from "./send_chat_message_reducer";
 import UpsertProfileReducer from "./upsert_profile_reducer";
 
 // Import all procedure arg schemas
@@ -135,6 +136,7 @@ const reducersSchema = __reducers(
   __reducerSchema("complete_match", CompleteMatchReducer),
   __reducerSchema("fail_match", FailMatchReducer),
   __reducerSchema("join_event", JoinEventReducer),
+  __reducerSchema("send_chat_message", SendChatMessageReducer),
   __reducerSchema("upsert_profile", UpsertProfileReducer),
 );
 

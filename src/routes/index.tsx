@@ -13,7 +13,7 @@ import {
   useSpacetimeDBQuery,
 } from 'spacetimedb/tanstack';
 import type { Profile, Match, AgentMessage } from '../module_bindings/types';
-import { runMatch } from '@/server/match';
+import { runMatch, runAgentReply } from '@/server/match';
 import { useAuth } from 'react-oidc-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +43,12 @@ function pairKeyFor(eventId: bigint, aHex: string, bHex: string): string {
   const [first, second] = [normHex(aHex), normHex(bHex)].sort();
   return `${Number(eventId)}:${first}:${second}`;
 }
+
+// speaker is 'a'/'b' (that side's AI agent) or 'a_human'/'b_human' (the real
+// attendee on that side). The leading char is the side.
+const sideOf = (speaker: string): 'a' | 'b' =>
+  speaker.charAt(0) === 'b' ? 'b' : 'a';
+const isHumanSpeaker = (speaker: string) => speaker.includes('_human');
 
 function parseList(json: string): string[] {
   try {
@@ -100,6 +106,7 @@ function App() {
 
   const upsertProfile = useReducer(reducers.upsertProfile);
   const joinEvent = useReducer(reducers.joinEvent);
+  const sendChatMessage = useReducer(reducers.sendChatMessage);
 
   const [profiles] = useSpacetimeDBQuery(tables.profile);
   const [events] = useSpacetimeDBQuery(tables.event);
@@ -214,6 +221,35 @@ function App() {
     for (const arr of m.values()) arr.sort((a, b) => a.turn - b.turn);
     return m;
   }, [agentMessages]);
+
+  // Latest transcript snapshot, read inside the deferred agent-reply check.
+  const messagesRef = useRef(messagesByPair);
+  messagesRef.current = messagesByPair;
+
+  // A human posts into a match's chat. After a short grace period, if the other
+  // side hasn't "taken over" (no human message from that side), its agent
+  // replies. Once that side's human has typed even once, the agent stays quiet.
+  const onSendChat = (
+    pairKey: string,
+    otherHex: string,
+    otherProfile: Profile,
+    text: string
+  ) => {
+    if (!myHex || !text.trim()) return;
+    sendChatMessage({ pairKey, text: text.trim() });
+    const responderSide: 'a' | 'b' =
+      normHex(myHex) <= normHex(otherHex) ? 'b' : 'a';
+    setTimeout(() => {
+      const msgs = messagesRef.current.get(pairKey) ?? [];
+      const responderTookOver = msgs.some(
+        m => sideOf(m.speaker) === responderSide && isHumanSpeaker(m.speaker)
+      );
+      if (responderTookOver) return;
+      runAgentReply({
+        data: { pairKey, responderSide, responderProfile: toLite(otherProfile) },
+      }).catch(() => {});
+    }, 1500);
+  };
 
   const reRun = (pairKey: string, otherHex: string, otherProfile: Profile) => {
     if (!myAttendee || !myHex || !myProfile) return;
@@ -352,7 +388,9 @@ function App() {
               profile={o.profile!}
               match={o.match}
               transcript={messagesByPair.get(o.pairKey) ?? []}
+              mySide={normHex(myHex!) <= normHex(o.otherHex) ? 'a' : 'b'}
               onReRun={() => reRun(o.pairKey, o.otherHex, o.profile!)}
+              onSend={text => onSendChat(o.pairKey, o.otherHex, o.profile!, text)}
             />
           ))}
         </div>
@@ -367,14 +405,19 @@ function MatchCard({
   profile,
   match,
   transcript,
+  mySide,
   onReRun,
+  onSend,
 }: {
   profile: Profile;
   match?: Match;
   transcript: AgentMessage[];
+  mySide: 'a' | 'b';
   onReRun: () => void;
+  onSend: (text: string) => void;
 }) {
   const [showChat, setShowChat] = useState(false);
+  const [draft, setDraft] = useState('');
   const status = match?.status ?? 'pending';
   const commonGround = match ? parseList(match.commonGround) : [];
   const icebreakers = match ? parseList(match.icebreakers) : [];
@@ -442,26 +485,63 @@ function MatchCard({
               className="text-xs text-muted-foreground underline-offset-2 hover:underline"
               onClick={() => setShowChat(s => !s)}
             >
-              {showChat ? 'Hide' : 'Show'} agent conversation ({transcript.length})
+              {showChat ? 'Hide' : 'Show'} conversation ({transcript.length})
             </button>
             {showChat && (
-              <ScrollArea className="h-40 mt-2 rounded-md border p-2">
-                <div className="flex flex-col gap-2">
-                  {transcript.map(m => (
-                    <div
-                      key={m.id.toString()}
-                      className={cn(
-                        'rounded-lg px-2.5 py-1.5 text-xs max-w-[85%]',
-                        m.speaker === 'a'
-                          ? 'bg-muted self-start'
-                          : 'bg-primary text-primary-foreground self-end'
-                      )}
-                    >
-                      {m.text}
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
+              <>
+                <ScrollArea className="h-40 mt-2 rounded-md border p-2">
+                  <div className="flex flex-col gap-2">
+                    {transcript.map(m => {
+                      const mine = sideOf(m.speaker) === mySide;
+                      const human = isHumanSpeaker(m.speaker);
+                      return (
+                        <div
+                          key={m.id.toString()}
+                          className={cn(
+                            'flex flex-col gap-0.5 max-w-[85%]',
+                            mine ? 'self-end items-end' : 'self-start items-start'
+                          )}
+                        >
+                          {human && (
+                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                              {mine ? 'you' : profile.name}
+                            </span>
+                          )}
+                          <div
+                            className={cn(
+                              'rounded-lg px-2.5 py-1.5 text-xs',
+                              mine
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted'
+                            )}
+                          >
+                            {m.text}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+                <form
+                  className="mt-2 flex gap-2"
+                  onSubmit={e => {
+                    e.preventDefault();
+                    if (!draft.trim()) return;
+                    onSend(draft.trim());
+                    setDraft('');
+                  }}
+                >
+                  <Input
+                    value={draft}
+                    onChange={e => setDraft(e.target.value)}
+                    placeholder={`Jump in — chat with ${profile.name}…`}
+                    className="h-8 text-xs"
+                  />
+                  <Button type="submit" size="sm" disabled={!draft.trim()}>
+                    Send
+                  </Button>
+                </form>
+              </>
             )}
           </div>
         )}

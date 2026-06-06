@@ -11,6 +11,7 @@ import BeginMatchReducer from "../begin_match_reducer";
 import CompleteMatchReducer from "../complete_match_reducer";
 import FailMatchReducer from "../fail_match_reducer";
 import JoinEventReducer from "../join_event_reducer";
+import SendChatMessageReducer from "../send_chat_message_reducer";
 import UpsertProfileReducer from "../upsert_profile_reducer";
 
 export type AppendAgentTurnParams = __Infer<typeof AppendAgentTurnReducer>;
@@ -18,5 +19,6 @@ export type BeginMatchParams = __Infer<typeof BeginMatchReducer>;
 export type CompleteMatchParams = __Infer<typeof CompleteMatchReducer>;
 export type FailMatchParams = __Infer<typeof FailMatchReducer>;
 export type JoinEventParams = __Infer<typeof JoinEventReducer>;
+export type SendChatMessageParams = __Infer<typeof SendChatMessageReducer>;
 export type UpsertProfileParams = __Infer<typeof UpsertProfileReducer>;
 

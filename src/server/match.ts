@@ -1,8 +1,8 @@
 import { createServerFn } from '@tanstack/react-start';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { generateText, generateObject } from 'ai';
+import { streamText, generateObject, type ModelMessage } from 'ai';
 import { z } from 'zod';
-import { callReducer } from '@/lib/spacetimedb-server';
+import { callReducer, querySql } from '@/lib/spacetimedb-server';
 
 // ── Input ────────────────────────────────────────────────────────────────────
 
@@ -83,7 +83,8 @@ function systemFor(p: ProfileLite): string {
     `You are at a networking event chatting with another attendee to discover`,
     `common ground and whether you two should meet in person. Speak in the`,
     `first person, naturally, 1-2 sentences, specific and curious. Do not repeat`,
-    `yourself or restate your whole bio.`,
+    `yourself or restate your whole bio. Write plain conversational text — no`,
+    `stage directions, asterisks, emotes, or narration.`,
   ]
     .filter(Boolean)
     .join(' ');
@@ -130,31 +131,77 @@ export const runMatch = createServerFn({ method: 'POST' })
         idArg(B.hex),
       ]);
 
-      // Stream the agent↔agent dialogue into SpacetimeDB, one turn at a time.
-      let transcript = '';
+      // Track the dialogue as structured turns so each agent gets real message
+      // history: its own past turns as `assistant`, the other agent's as `user`.
+      const turns: { speaker: 'a' | 'b'; name: string; text: string }[] = [];
+
+      const buildMessages = (speaker: 'a' | 'b'): ModelMessage[] => {
+        if (turns.length === 0) {
+          return [
+            {
+              role: 'user',
+              content:
+                'You are meeting another attendee for the first time. Open ' +
+                'with a friendly, specific hello that hints at what you do.',
+            },
+          ];
+        }
+        // Turns strictly alternate, so this always ends on a `user` message.
+        return turns.map(turn => ({
+          role: turn.speaker === speaker ? 'assistant' : 'user',
+          content: turn.text,
+        }));
+      };
+
+      // Stream each turn into SpacetimeDB as it generates, so the board shows
+      // the agents typing live. DB writes are throttled to keep churn sane.
       for (let turn = 0; turn < TURNS; turn++) {
         const speaker = turn % 2 === 0 ? 'a' : 'b';
         const self = speaker === 'a' ? A.profile : B.profile;
-        const prompt =
-          transcript === ''
-            ? 'Open the conversation with a friendly, specific hello that hints at what you do.'
-            : `Conversation so far:\n${transcript}\nReply as ${self.name}.`;
 
-        const { text } = await generateText({
+        let streamError: unknown = null;
+        const result = streamText({
           model,
           system: systemFor(self),
-          prompt,
+          messages: buildMessages(speaker),
+          onError: ({ error }) => {
+            streamError = error;
+          },
         });
-        const turnText = text.trim();
 
+        let acc = '';
+        let lastFlush = 0;
+        for await (const delta of result.textStream) {
+          acc += delta;
+          const now = Date.now();
+          if (now - lastFlush > 200) {
+            lastFlush = now;
+            await callReducer('append_agent_turn', [
+              pairKey,
+              speaker,
+              turn,
+              acc.trimStart(),
+            ]);
+          }
+        }
+        if (streamError) {
+          throw streamError instanceof Error
+            ? streamError
+            : new Error(String(streamError));
+        }
+
+        const turnText = (await result.text).trim();
+        // Final write with the complete, trimmed turn.
         await callReducer('append_agent_turn', [
           pairKey,
           speaker,
           turn,
           turnText,
         ]);
-        transcript += `${self.name}: ${turnText}\n`;
+        turns.push({ speaker, name: self.name, text: turnText });
       }
+
+      const transcript = turns.map(t => `${t.name}: ${t.text}`).join('\n');
 
       // Produce the structured scorecard from the full transcript + profiles.
       const profileBlock = (label: string, p: ProfileLite) =>
@@ -196,5 +243,85 @@ export const runMatch = createServerFn({ method: 'POST' })
       const message = err instanceof Error ? err.message : String(err);
       await callReducer('fail_match', [pairKey, message]).catch(() => {});
       return { pairKey, status: 'error' as const, error: message };
+    }
+  });
+
+// ── Agent reply (human-in-the-loop chat) ─────────────────────────────────────
+// Called when a human posts into a match's chat and the other side is still
+// agent-driven (its human hasn't taken over). Generates that side's agent reply
+// from the full conversation history and streams it in as the next turn.
+
+const RunAgentReplyInput = z.object({
+  pairKey: z.string(),
+  responderSide: z.enum(['a', 'b']),
+  responderProfile: ProfileLite,
+});
+
+export const runAgentReply = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => RunAgentReplyInput.parse(data))
+  .handler(async ({ data }) => {
+    const { pairKey, responderSide, responderProfile } = data;
+    try {
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
+      const model = createOpenRouter({ apiKey })(
+        process.env.OPENROUTER_MODEL ?? 'anthropic/claude-3.5-haiku'
+      );
+
+      // pairKey is `eventId:hexA:hexB` (no quotes), so this interpolation is safe.
+      const rows = await querySql(
+        `SELECT speaker, turn, text FROM agent_message WHERE pair_key = '${pairKey}'`
+      );
+      const history = (rows[0]?.rows ?? [])
+        .map(r => ({
+          speaker: String(r[0]),
+          turn: Number(r[1]),
+          text: String(r[2]),
+        }))
+        .sort((a, b) => a.turn - b.turn);
+
+      const nextTurn =
+        history.reduce((mx, h) => Math.max(mx, h.turn), -1) + 1;
+
+      // speaker is 'a'/'b' (agent) or 'a_human'/'b_human'; the leading char is
+      // the side. Messages on the responder's side are the assistant's own.
+      const messages: ModelMessage[] = history.map(h => ({
+        role: h.speaker.startsWith(responderSide) ? 'assistant' : 'user',
+        content: h.text,
+      }));
+
+      const result = streamText({
+        model,
+        system: systemFor(responderProfile),
+        messages,
+      });
+
+      let acc = '';
+      let lastFlush = 0;
+      for await (const delta of result.textStream) {
+        acc += delta;
+        const now = Date.now();
+        if (now - lastFlush > 200) {
+          lastFlush = now;
+          await callReducer('append_agent_turn', [
+            pairKey,
+            responderSide,
+            nextTurn,
+            acc.trimStart(),
+          ]);
+        }
+      }
+      const text = (await result.text).trim();
+      await callReducer('append_agent_turn', [
+        pairKey,
+        responderSide,
+        nextTurn,
+        text,
+      ]);
+
+      return { pairKey, ok: true as const };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { pairKey, ok: false as const, error: message };
     }
   });

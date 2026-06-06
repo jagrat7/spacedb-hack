@@ -71,7 +71,10 @@ const match = table(
   }
 );
 
-// speaker: 'a' | 'b'
+// speaker encodes side + authorship: 'a'/'b' = that side's AI agent,
+// 'a_human'/'b_human' = the real attendee on that side typed it. (Encoded in
+// the existing string column to avoid a destructive migration of a populated
+// table — adding a real column requires data deletion.)
 const agentMessage = table(
   {
     name: 'agent_message',
@@ -149,6 +152,39 @@ export const joinEvent = spacetimedb.reducer(
   }
 );
 
+// A human jumps into a match's conversation. Authorized by ctx.sender (must be
+// one of the two matched attendees). Appended as the next turn, flagged human.
+export const sendChatMessage = spacetimedb.reducer(
+  { pairKey: t.string(), text: t.string() },
+  (ctx, { pairKey, text }) => {
+    const trimmed = text.trim();
+    if (!trimmed) throw new SenderError('Message must not be empty');
+
+    const m = ctx.db.match.pairKey.find(pairKey);
+    if (!m) throw new SenderError('Unknown match');
+
+    let speaker: string;
+    if (m.aIdentity.equals(ctx.sender)) speaker = 'a_human';
+    else if (m.bIdentity.equals(ctx.sender)) speaker = 'b_human';
+    else throw new SenderError('Not a participant in this match');
+
+    const nextTurn =
+      [...ctx.db.agentMessage.by_pair.filter(pairKey)].reduce(
+        (mx, r) => Math.max(mx, r.turn),
+        -1
+      ) + 1;
+
+    ctx.db.agentMessage.insert({
+      id: 0n,
+      pairKey,
+      speaker,
+      turn: nextTurn,
+      text: trimmed,
+      createdAt: ctx.timestamp,
+    });
+  }
+);
+
 // ── Orchestrator reducers (called by the server match function over HTTP) ────
 // The server function is a trusted orchestrator: it passes the participant
 // identities as arguments rather than relying on ctx.sender, since the writer
@@ -190,6 +226,8 @@ export const beginMatch = spacetimedb.reducer(
   }
 );
 
+// Upsert a turn by (pairKey, turn). Called repeatedly as a turn streams in, so
+// the same row's text grows live on the board instead of inserting duplicates.
 export const appendAgentTurn = spacetimedb.reducer(
   {
     pairKey: t.string(),
@@ -198,14 +236,21 @@ export const appendAgentTurn = spacetimedb.reducer(
     text: t.string(),
   },
   (ctx, { pairKey, speaker, turn, text }) => {
-    ctx.db.agentMessage.insert({
-      id: 0n,
-      pairKey,
-      speaker,
-      turn,
-      text,
-      createdAt: ctx.timestamp,
-    });
+    const existing = [...ctx.db.agentMessage.by_pair.filter(pairKey)].find(
+      m => m.turn === turn
+    );
+    if (existing) {
+      ctx.db.agentMessage.id.update({ ...existing, speaker, text });
+    } else {
+      ctx.db.agentMessage.insert({
+        id: 0n,
+        pairKey,
+        speaker,
+        turn,
+        text,
+        createdAt: ctx.timestamp,
+      });
+    }
   }
 );
 
