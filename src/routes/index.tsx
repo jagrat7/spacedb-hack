@@ -14,6 +14,7 @@ import {
 } from 'spacetimedb/tanstack';
 import type { Profile, Match, AgentMessage } from '../module_bindings/types';
 import { runMatch } from '@/server/match';
+import { useAuth } from 'react-oidc-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -95,6 +96,7 @@ const EMPTY_FORM: ProfileLite = {
 
 function App() {
   const { identity, isActive: connected, getConnection } = useSpacetimeDB();
+  const auth = useAuth();
 
   const upsertProfile = useReducer(reducers.upsertProfile);
   const joinEvent = useReducer(reducers.joinEvent);
@@ -164,17 +166,17 @@ function App() {
       .sort((x, y) => (y.match?.score ?? -1) - (x.match?.score ?? -1));
   }, [attendees, profiles, matchByKey, myAttendee, myHex]);
 
-  // Trigger matching. Only the canonical "A" side (smaller identity hex) kicks
-  // off each pair, so the two clients don't both start the same match.
+  // Trigger matching. The canonical "A" side (smaller identity hex) kicks off
+  // each pair immediately so two live clients don't both start the same match.
+  // If I'm the "B" side and no match row shows up shortly, the A side is
+  // probably offline (e.g. a seeded agent), so I trigger it myself.
   useEffect(() => {
     if (!myAttendee || !myHex || !myProfile) return;
     const eventId = myAttendee.eventId;
-    for (const o of others) {
-      if (!o.profile) continue;
-      const amCanonicalA = normHex(myHex) <= normHex(o.otherHex);
-      if (!amCanonicalA) continue;
-      if (matchByKey.has(o.pairKey)) continue;
-      if (triggered.current.has(o.pairKey)) continue;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    const fire = (o: (typeof others)[number]) => {
+      if (!o.profile || triggered.current.has(o.pairKey)) return;
       triggered.current.add(o.pairKey);
       runMatch({
         data: {
@@ -182,10 +184,24 @@ function App() {
           aIdentity: myHex,
           bIdentity: o.otherHex,
           aProfile: toLite(myProfile),
-          bProfile: toLite(o.profile),
+          bProfile: toLite(o.profile!),
         },
       }).catch(() => triggered.current.delete(o.pairKey));
+    };
+
+    for (const o of others) {
+      if (!o.profile) continue;
+      if (matchByKey.has(o.pairKey)) continue;
+      if (triggered.current.has(o.pairKey)) continue;
+      const amCanonicalA = normHex(myHex) <= normHex(o.otherHex);
+      if (amCanonicalA) {
+        fire(o);
+      } else {
+        // Fallback: if the canonical-A side hasn't started it in time, do it.
+        timers.push(setTimeout(() => fire(o), 4000));
+      }
     }
+    return () => timers.forEach(clearTimeout);
   }, [others, myAttendee, myHex, myProfile, matchByKey]);
 
   const messagesByPair = useMemo(() => {
@@ -308,6 +324,9 @@ function App() {
           <Badge variant="outline">{myEvent?.name ?? 'Event'}</Badge>
           <Button size="sm" variant="outline" onClick={() => { setForm(toLite(myProfile)); setEditing(true); }}>
             Edit agent
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => auth.signoutRedirect()}>
+            Sign out
           </Button>
         </CardContent>
       </Card>
