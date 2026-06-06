@@ -6,9 +6,17 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
-import SendMessageReducer from "../send_message_reducer";
-import SetNameReducer from "../set_name_reducer";
+import AppendAgentTurnReducer from "../append_agent_turn_reducer";
+import BeginMatchReducer from "../begin_match_reducer";
+import CompleteMatchReducer from "../complete_match_reducer";
+import FailMatchReducer from "../fail_match_reducer";
+import JoinEventReducer from "../join_event_reducer";
+import UpsertProfileReducer from "../upsert_profile_reducer";
 
-export type SendMessageParams = __Infer<typeof SendMessageReducer>;
-export type SetNameParams = __Infer<typeof SetNameReducer>;
+export type AppendAgentTurnParams = __Infer<typeof AppendAgentTurnReducer>;
+export type BeginMatchParams = __Infer<typeof BeginMatchReducer>;
+export type CompleteMatchParams = __Infer<typeof CompleteMatchReducer>;
+export type FailMatchParams = __Infer<typeof FailMatchReducer>;
+export type JoinEventParams = __Infer<typeof JoinEventReducer>;
+export type UpsertProfileParams = __Infer<typeof UpsertProfileReducer>;
 

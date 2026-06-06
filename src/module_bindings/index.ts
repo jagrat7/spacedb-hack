@@ -34,47 +34,108 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
-import SendMessageReducer from "./send_message_reducer";
-import SetNameReducer from "./set_name_reducer";
+import AppendAgentTurnReducer from "./append_agent_turn_reducer";
+import BeginMatchReducer from "./begin_match_reducer";
+import CompleteMatchReducer from "./complete_match_reducer";
+import FailMatchReducer from "./fail_match_reducer";
+import JoinEventReducer from "./join_event_reducer";
+import UpsertProfileReducer from "./upsert_profile_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
-import MessageRow from "./message_table";
-import UserRow from "./user_table";
+import AgentMessageRow from "./agent_message_table";
+import AttendeeRow from "./attendee_table";
+import EventRow from "./event_table";
+import MatchRow from "./match_table";
+import ProfileRow from "./profile_table";
 
 /** Type-only namespace exports for generated type groups. */
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
-  message: __table({
-    name: 'message',
+  agentMessage: __table({
+    name: 'agent_message',
     indexes: [
-      { accessor: 'id', name: 'message_id_idx_btree', algorithm: 'btree', columns: [
+      { accessor: 'id', name: 'agent_message_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'by_pair', name: 'agent_message_pair_key_idx_btree', algorithm: 'btree', columns: [
+        'pairKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'agent_message_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, AgentMessageRow),
+  attendee: __table({
+    name: 'attendee',
+    indexes: [
+      { accessor: 'by_event_identity', name: 'attendee_event_id_identity_idx_btree', algorithm: 'btree', columns: [
+        'eventId',
+        'identity',
+      ] },
+      { accessor: 'by_event', name: 'attendee_event_id_idx_btree', algorithm: 'btree', columns: [
+        'eventId',
+      ] },
+      { accessor: 'id', name: 'attendee_id_idx_btree', algorithm: 'btree', columns: [
         'id',
       ] },
     ],
     constraints: [
-      { name: 'message_id_key', constraint: 'unique', columns: ['id'] },
+      { name: 'attendee_id_key', constraint: 'unique', columns: ['id'] },
     ],
-  }, MessageRow),
-  user: __table({
-    name: 'user',
+  }, AttendeeRow),
+  event: __table({
+    name: 'event',
     indexes: [
-      { accessor: 'identity', name: 'user_identity_idx_btree', algorithm: 'btree', columns: [
+      { accessor: 'code', name: 'event_code_idx_btree', algorithm: 'btree', columns: [
+        'code',
+      ] },
+      { accessor: 'id', name: 'event_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'event_code_key', constraint: 'unique', columns: ['code'] },
+      { name: 'event_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, EventRow),
+  match: __table({
+    name: 'match',
+    indexes: [
+      { accessor: 'by_event', name: 'match_event_id_idx_btree', algorithm: 'btree', columns: [
+        'eventId',
+      ] },
+      { accessor: 'pairKey', name: 'match_pair_key_idx_btree', algorithm: 'btree', columns: [
+        'pairKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'match_pair_key_key', constraint: 'unique', columns: ['pairKey'] },
+    ],
+  }, MatchRow),
+  profile: __table({
+    name: 'profile',
+    indexes: [
+      { accessor: 'identity', name: 'profile_identity_idx_btree', algorithm: 'btree', columns: [
         'identity',
       ] },
     ],
     constraints: [
-      { name: 'user_identity_key', constraint: 'unique', columns: ['identity'] },
+      { name: 'profile_identity_key', constraint: 'unique', columns: ['identity'] },
     ],
-  }, UserRow),
+  }, ProfileRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
-  __reducerSchema("send_message", SendMessageReducer),
-  __reducerSchema("set_name", SetNameReducer),
+  __reducerSchema("append_agent_turn", AppendAgentTurnReducer),
+  __reducerSchema("begin_match", BeginMatchReducer),
+  __reducerSchema("complete_match", CompleteMatchReducer),
+  __reducerSchema("fail_match", FailMatchReducer),
+  __reducerSchema("join_event", JoinEventReducer),
+  __reducerSchema("upsert_profile", UpsertProfileReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

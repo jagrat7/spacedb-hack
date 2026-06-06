@@ -10,9 +10,13 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-export default __t.row({
-  id: __t.u64().primaryKey(),
-  sender: __t.identity(),
-  sent: __t.timestamp(),
-  text: __t.string(),
-});
+export default {
+  pairKey: __t.string(),
+  score: __t.u32(),
+  metricShared: __t.u32(),
+  metricComplementary: __t.u32(),
+  metricGoals: __t.u32(),
+  summary: __t.string(),
+  commonGround: __t.string(),
+  icebreakers: __t.string(),
+};

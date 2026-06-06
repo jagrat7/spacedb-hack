@@ -11,5 +11,6 @@ import {
 } from "spacetimedb";
 
 export default {
-  name: __t.string(),
+  pairKey: __t.string(),
+  error: __t.string(),
 };

@@ -10,18 +10,58 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-export const Message = __t.object("Message", {
+export const AgentMessage = __t.object("AgentMessage", {
   id: __t.u64(),
-  sender: __t.identity(),
-  sent: __t.timestamp(),
+  pairKey: __t.string(),
+  speaker: __t.string(),
+  turn: __t.u32(),
   text: __t.string(),
+  createdAt: __t.timestamp(),
 });
-export type Message = __Infer<typeof Message>;
+export type AgentMessage = __Infer<typeof AgentMessage>;
 
-export const User = __t.object("User", {
+export const Attendee = __t.object("Attendee", {
+  id: __t.u64(),
+  eventId: __t.u64(),
   identity: __t.identity(),
-  name: __t.option(__t.string()),
-  online: __t.bool(),
+  joinedAt: __t.timestamp(),
 });
-export type User = __Infer<typeof User>;
+export type Attendee = __Infer<typeof Attendee>;
+
+export const Event = __t.object("Event", {
+  id: __t.u64(),
+  code: __t.string(),
+  name: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type Event = __Infer<typeof Event>;
+
+export const Match = __t.object("Match", {
+  pairKey: __t.string(),
+  eventId: __t.u64(),
+  aIdentity: __t.identity(),
+  bIdentity: __t.identity(),
+  status: __t.string(),
+  score: __t.u32(),
+  metricShared: __t.u32(),
+  metricComplementary: __t.u32(),
+  metricGoals: __t.u32(),
+  summary: __t.string(),
+  commonGround: __t.string(),
+  icebreakers: __t.string(),
+  updatedAt: __t.timestamp(),
+});
+export type Match = __Infer<typeof Match>;
+
+export const Profile = __t.object("Profile", {
+  identity: __t.identity(),
+  name: __t.string(),
+  role: __t.string(),
+  workingOn: __t.string(),
+  interests: __t.string(),
+  lookingFor: __t.string(),
+  offer: __t.string(),
+  avatarSeed: __t.string(),
+});
+export type Profile = __Infer<typeof Profile>;
 
