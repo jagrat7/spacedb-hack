@@ -89,7 +89,7 @@ function EventRoom() {
             className="font-pixel text-xl tracking-wide text-wood"
             style={{ textShadow: '0 1px 0 rgba(255,255,255,0.45)' }}
           >
-            Overlap
+            vibe-check
           </span>
         </button>
         <div className="flex items-center gap-3">

@@ -138,7 +138,7 @@ function SpacetimeWithAuth({ children }: { children: React.ReactNode }) {
   if (!auth.isAuthenticated || !connectionBuilder) {
     return (
       <FullScreen>
-        <h1 className="text-2xl font-heading font-semibold">Overlap</h1>
+        <h1 className="text-2xl font-heading font-semibold">vibe-check</h1>
         <p className="text-sm text-muted-foreground">
           Sign in to send your AI agent to meet everyone at the event.
         </p>
@@ -168,7 +168,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   if (!mounted) {
     return (
       <FullScreen>
-        <p className="text-sm text-muted-foreground">Loading Overlap…</p>
+        <p className="text-sm text-muted-foreground">Loading vibe-check…</p>
       </FullScreen>
     );
   }

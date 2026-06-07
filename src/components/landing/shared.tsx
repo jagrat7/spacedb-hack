@@ -90,7 +90,7 @@ export function Signboard() {
           className="font-pixel text-2xl tracking-wide text-wood"
           style={{ textShadow: '0 1px 0 rgba(255,255,255,0.45)' }}
         >
-          Overlap
+          vibe-check
         </span>
         <Leaf size={18} color="#4e9e63" flip />
       </div>
