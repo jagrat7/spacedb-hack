@@ -112,6 +112,33 @@ const presence = table(
   }
 );
 
+// A "ring" is an in-person beacon: one attendee pings another so they can find
+// each other physically in the room. Only used in offline (in-person) events.
+// status: 'pending' (waiting on the recipient) | 'accepted' (both phones ring).
+// Decline / cancel / "found them" all just delete the row. rkey is a
+// deterministic *directional* key (from→to) so re-ringing the same person
+// upserts instead of stacking duplicate rows.
+const ring = table(
+  {
+    name: 'ring',
+    public: true,
+    indexes: [
+      { accessor: 'by_event', algorithm: 'btree', columns: ['eventId'] },
+      { accessor: 'by_to', algorithm: 'btree', columns: ['toIdentity'] },
+      { accessor: 'by_from', algorithm: 'btree', columns: ['fromIdentity'] },
+    ],
+  },
+  {
+    rkey: t.string().primaryKey(),
+    eventId: t.u64(),
+    fromIdentity: t.identity(),
+    toIdentity: t.identity(),
+    status: t.string(),
+    createdAt: t.timestamp(),
+    updatedAt: t.timestamp(),
+  }
+);
+
 const spacetimedb = schema({
   event,
   attendee,
@@ -119,6 +146,7 @@ const spacetimedb = schema({
   match,
   agentMessage,
   presence,
+  ring,
 });
 export default spacetimedb;
 
@@ -307,6 +335,93 @@ export const sendChatMessage = spacetimedb.reducer(
       text: trimmed,
       createdAt: ctx.timestamp,
     });
+  }
+);
+
+// ── Ring beacon (in-person events only) ──────────────────────────────────────
+
+const ringKey = (eventId: bigint, fromHex: string, toHex: string) =>
+  `${Number(eventId)}:${fromHex.toLowerCase().replace(/^0x/, '')}:${toHex
+    .toLowerCase()
+    .replace(/^0x/, '')}`;
+
+// Ring another attendee so they can find you in the room. Caller is the sender
+// (ctx.sender); upserts a pending ring keyed from→to. In-person events only.
+export const sendRing = spacetimedb.reducer(
+  { eventId: t.u64(), toIdentity: t.identity() },
+  (ctx, { eventId, toIdentity }) => {
+    if (toIdentity.equals(ctx.sender)) {
+      throw new SenderError('Cannot ring yourself');
+    }
+
+    const ev = ctx.db.event.id.find(eventId);
+    if (!ev) throw new SenderError('Unknown event');
+    if (ev.isOnline) {
+      throw new SenderError('Ringing is only for in-person events');
+    }
+
+    const mine = [
+      ...ctx.db.attendee.by_event_identity.filter([eventId, ctx.sender]),
+    ];
+    const theirs = [
+      ...ctx.db.attendee.by_event_identity.filter([eventId, toIdentity]),
+    ];
+    if (mine.length === 0 || theirs.length === 0) {
+      throw new SenderError('Both users must be in this event');
+    }
+
+    const rkey = ringKey(
+      eventId,
+      ctx.sender.toHexString(),
+      toIdentity.toHexString()
+    );
+    const row = {
+      rkey,
+      eventId,
+      fromIdentity: ctx.sender,
+      toIdentity,
+      status: 'pending',
+      createdAt: ctx.timestamp,
+      updatedAt: ctx.timestamp,
+    };
+    if (ctx.db.ring.rkey.find(rkey)) {
+      ctx.db.ring.rkey.update(row);
+    } else {
+      ctx.db.ring.insert(row);
+    }
+  }
+);
+
+// Recipient accepts a ring → status flips to 'accepted' and both phones ring.
+export const acceptRing = spacetimedb.reducer(
+  { rkey: t.string() },
+  (ctx, { rkey }) => {
+    const r = ctx.db.ring.rkey.find(rkey);
+    if (!r) throw new SenderError('Ring no longer exists');
+    if (!r.toIdentity.equals(ctx.sender)) {
+      throw new SenderError('Only the person being rung can accept');
+    }
+    ctx.db.ring.rkey.update({
+      ...r,
+      status: 'accepted',
+      updatedAt: ctx.timestamp,
+    });
+  }
+);
+
+// Clear a ring: cancel (sender), decline (recipient), or "found them" (either).
+export const dismissRing = spacetimedb.reducer(
+  { rkey: t.string() },
+  (ctx, { rkey }) => {
+    const r = ctx.db.ring.rkey.find(rkey);
+    if (!r) return;
+    if (
+      !r.fromIdentity.equals(ctx.sender) &&
+      !r.toIdentity.equals(ctx.sender)
+    ) {
+      throw new SenderError('Not a participant in this ring');
+    }
+    ctx.db.ring.rkey.delete(rkey);
   }
 );
 

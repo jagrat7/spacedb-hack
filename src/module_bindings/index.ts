@@ -34,14 +34,17 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import AcceptRingReducer from "./accept_ring_reducer";
 import AppendAgentTurnReducer from "./append_agent_turn_reducer";
 import BeginMatchReducer from "./begin_match_reducer";
 import CompleteMatchReducer from "./complete_match_reducer";
 import CreateEventReducer from "./create_event_reducer";
+import DismissRingReducer from "./dismiss_ring_reducer";
 import FailMatchReducer from "./fail_match_reducer";
 import JoinEventReducer from "./join_event_reducer";
 import OpenPlazaChatReducer from "./open_plaza_chat_reducer";
 import SendChatMessageReducer from "./send_chat_message_reducer";
+import SendRingReducer from "./send_ring_reducer";
 import UpdatePositionReducer from "./update_position_reducer";
 import UpsertProfileReducer from "./upsert_profile_reducer";
 
@@ -54,6 +57,7 @@ import EventRow from "./event_table";
 import MatchRow from "./match_table";
 import PresenceRow from "./presence_table";
 import ProfileRow from "./profile_table";
+import RingRow from "./ring_table";
 
 /** Type-only namespace exports for generated type groups. */
 
@@ -145,18 +149,41 @@ const tablesSchema = __schema({
       { name: 'profile_identity_key', constraint: 'unique', columns: ['identity'] },
     ],
   }, ProfileRow),
+  ring: __table({
+    name: 'ring',
+    indexes: [
+      { accessor: 'by_event', name: 'ring_event_id_idx_btree', algorithm: 'btree', columns: [
+        'eventId',
+      ] },
+      { accessor: 'by_from', name: 'ring_from_identity_idx_btree', algorithm: 'btree', columns: [
+        'fromIdentity',
+      ] },
+      { accessor: 'rkey', name: 'ring_rkey_idx_btree', algorithm: 'btree', columns: [
+        'rkey',
+      ] },
+      { accessor: 'by_to', name: 'ring_to_identity_idx_btree', algorithm: 'btree', columns: [
+        'toIdentity',
+      ] },
+    ],
+    constraints: [
+      { name: 'ring_rkey_key', constraint: 'unique', columns: ['rkey'] },
+    ],
+  }, RingRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("accept_ring", AcceptRingReducer),
   __reducerSchema("append_agent_turn", AppendAgentTurnReducer),
   __reducerSchema("begin_match", BeginMatchReducer),
   __reducerSchema("complete_match", CompleteMatchReducer),
   __reducerSchema("create_event", CreateEventReducer),
+  __reducerSchema("dismiss_ring", DismissRingReducer),
   __reducerSchema("fail_match", FailMatchReducer),
   __reducerSchema("join_event", JoinEventReducer),
   __reducerSchema("open_plaza_chat", OpenPlazaChatReducer),
   __reducerSchema("send_chat_message", SendChatMessageReducer),
+  __reducerSchema("send_ring", SendRingReducer),
   __reducerSchema("update_position", UpdatePositionReducer),
   __reducerSchema("upsert_profile", UpsertProfileReducer),
 );

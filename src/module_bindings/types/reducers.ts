@@ -6,25 +6,31 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import AcceptRingReducer from "../accept_ring_reducer";
 import AppendAgentTurnReducer from "../append_agent_turn_reducer";
 import BeginMatchReducer from "../begin_match_reducer";
 import CompleteMatchReducer from "../complete_match_reducer";
 import CreateEventReducer from "../create_event_reducer";
+import DismissRingReducer from "../dismiss_ring_reducer";
 import FailMatchReducer from "../fail_match_reducer";
 import JoinEventReducer from "../join_event_reducer";
 import OpenPlazaChatReducer from "../open_plaza_chat_reducer";
 import SendChatMessageReducer from "../send_chat_message_reducer";
+import SendRingReducer from "../send_ring_reducer";
 import UpdatePositionReducer from "../update_position_reducer";
 import UpsertProfileReducer from "../upsert_profile_reducer";
 
+export type AcceptRingParams = __Infer<typeof AcceptRingReducer>;
 export type AppendAgentTurnParams = __Infer<typeof AppendAgentTurnReducer>;
 export type BeginMatchParams = __Infer<typeof BeginMatchReducer>;
 export type CompleteMatchParams = __Infer<typeof CompleteMatchReducer>;
 export type CreateEventParams = __Infer<typeof CreateEventReducer>;
+export type DismissRingParams = __Infer<typeof DismissRingReducer>;
 export type FailMatchParams = __Infer<typeof FailMatchReducer>;
 export type JoinEventParams = __Infer<typeof JoinEventReducer>;
 export type OpenPlazaChatParams = __Infer<typeof OpenPlazaChatReducer>;
 export type SendChatMessageParams = __Infer<typeof SendChatMessageReducer>;
+export type SendRingParams = __Infer<typeof SendRingReducer>;
 export type UpdatePositionParams = __Infer<typeof UpdatePositionReducer>;
 export type UpsertProfileParams = __Infer<typeof UpsertProfileReducer>;
 

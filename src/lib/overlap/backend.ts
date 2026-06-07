@@ -15,6 +15,7 @@ import type {
   Match,
   Profile,
 } from '../../module_bindings/types'
+import type { Ring } from '../../module_bindings/types'
 import { runAgentReply, runMatch } from '@/server/match'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -25,6 +26,19 @@ export function pairKeyFor(eventId: bigint, aHex: string, bHex: string): string 
   const [first, second] = [normHex(aHex), normHex(bHex)].sort()
   return `${Number(eventId)}:${first}:${second}`
 }
+
+// Ring keys are directional (sender→recipient), matching the module's ringKey.
+export function ringKeyFor(eventId: bigint, fromHex: string, toHex: string): string {
+  return `${Number(eventId)}:${normHex(fromHex)}:${normHex(toHex)}`
+}
+
+// 'idle' nobody's ringing · 'outgoing' I rang them, waiting · 'incoming' they
+// rang me, waiting · 'active' accepted, both phones ringing.
+export type RingState = 'idle' | 'outgoing' | 'incoming' | 'active'
+
+export type IncomingRing = { rkey: string; fromHex: string; profile?: Profile }
+
+export type ActiveRing = { rkey: string; otherHex: string; profile?: Profile }
 
 // speaker is 'a'/'b' (that side's AI agent) or 'a_human'/'b_human' (the real
 // attendee on that side). The leading char is the side.
@@ -114,6 +128,20 @@ function usePresenceSubscription() {
   }, [isActive, getConnection])
 }
 
+function useRingSubscription() {
+  const { isActive, getConnection } = useSpacetimeDB()
+  useEffect(() => {
+    if (!isActive) return
+    const conn = getConnection() as DbConnection | null
+    if (!conn) return
+    try {
+      conn.subscriptionBuilder().subscribe([tables.ring])
+    } catch {
+      // table not published yet — ring feature degrades to no-op
+    }
+  }, [isActive, getConnection])
+}
+
 export function spawnSpot(hex: string): Spot {
   const h = normHex(hex)
   let a = 0
@@ -176,6 +204,7 @@ export function useEventRoom(eventIdStr: string) {
   const { identity } = useSpacetimeDB()
   useOverlapSubscriptions()
   usePresenceSubscription()
+  useRingSubscription()
 
   const [profiles] = useSpacetimeDBQuery(tables.profile)
   const [events] = useSpacetimeDBQuery(tables.event)
@@ -183,10 +212,14 @@ export function useEventRoom(eventIdStr: string) {
   const [matches] = useSpacetimeDBQuery(tables.match)
   const [agentMessages] = useSpacetimeDBQuery(tables.agentMessage)
   const [presences] = useSpacetimeDBQuery(tables.presence)
+  const [rings] = useSpacetimeDBQuery(tables.ring)
 
   const sendChatMessage = useReducer(reducers.sendChatMessage)
   const openPlazaChatReducer = useReducer(reducers.openPlazaChat)
   const updatePosition = useReducer(reducers.updatePosition)
+  const sendRingReducer = useReducer(reducers.sendRing)
+  const acceptRingReducer = useReducer(reducers.acceptRing)
+  const dismissRingReducer = useReducer(reducers.dismissRing)
   const triggered = useRef(new Set<string>())
 
   const eventId = useMemo<bigint | null>(() => {
@@ -231,6 +264,81 @@ export function useEventRoom(eventIdStr: string) {
     }
     return result.sort((x, y) => (y.match?.score ?? -1) - (x.match?.score ?? -1))
   }, [attendees, profiles, matchByKey, eventId, myHex])
+
+  const profileByHex = useMemo(() => {
+    const m = new Map<string, Profile>()
+    for (const p of profiles) m.set(normHex(p.identity.toHexString()), p)
+    return m
+  }, [profiles])
+
+  // Rings touching me in this event (either direction).
+  const myRings = useMemo<Ring[]>(() => {
+    if (eventId === null || !myHex) return []
+    const me = normHex(myHex)
+    return rings.filter(
+      r =>
+        r.eventId === eventId &&
+        (normHex(r.fromIdentity.toHexString()) === me ||
+          normHex(r.toIdentity.toHexString()) === me)
+    )
+  }, [rings, eventId, myHex])
+
+  // Per-other ring state, so each MatchCard knows what button to show.
+  const ringByHex = useMemo(() => {
+    const m = new Map<string, { state: RingState; rkey: string }>()
+    if (!myHex) return m
+    const me = normHex(myHex)
+    for (const o of others) {
+      const oh = normHex(o.otherHex)
+      const out = myRings.find(
+        r =>
+          normHex(r.fromIdentity.toHexString()) === me &&
+          normHex(r.toIdentity.toHexString()) === oh
+      )
+      const inc = myRings.find(
+        r =>
+          normHex(r.fromIdentity.toHexString()) === oh &&
+          normHex(r.toIdentity.toHexString()) === me
+      )
+      if (out?.status === 'accepted') m.set(oh, { state: 'active', rkey: out.rkey })
+      else if (inc?.status === 'accepted') m.set(oh, { state: 'active', rkey: inc.rkey })
+      else if (inc?.status === 'pending') m.set(oh, { state: 'incoming', rkey: inc.rkey })
+      else if (out?.status === 'pending') m.set(oh, { state: 'outgoing', rkey: out.rkey })
+    }
+    return m
+  }, [others, myRings, myHex])
+
+  // Pending rings aimed at me — surfaced as accept/decline notifications.
+  const incomingRings = useMemo<IncomingRing[]>(() => {
+    if (!myHex) return []
+    const me = normHex(myHex)
+    return myRings
+      .filter(r => normHex(r.toIdentity.toHexString()) === me && r.status === 'pending')
+      .map(r => {
+        const fromHex = normHex(r.fromIdentity.toHexString())
+        return { rkey: r.rkey, fromHex, profile: profileByHex.get(fromHex) }
+      })
+  }, [myRings, myHex, profileByHex])
+
+  // The accepted ring (if any) — drives the audible beacon on both phones.
+  const activeRing = useMemo<ActiveRing | undefined>(() => {
+    if (!myHex) return undefined
+    const me = normHex(myHex)
+    const r = myRings.find(x => x.status === 'accepted')
+    if (!r) return undefined
+    const otherHex =
+      normHex(r.fromIdentity.toHexString()) === me
+        ? normHex(r.toIdentity.toHexString())
+        : normHex(r.fromIdentity.toHexString())
+    return { rkey: r.rkey, otherHex, profile: profileByHex.get(otherHex) }
+  }, [myRings, myHex, profileByHex])
+
+  const sendRing = (o: Other) => {
+    if (eventId === null) return
+    sendRingReducer({ eventId, toIdentity: o.profile.identity })
+  }
+  const acceptRing = (rkey: string) => acceptRingReducer({ rkey })
+  const dismissRing = (rkey: string) => dismissRingReducer({ rkey })
 
   const spotByHex = useMemo(() => {
     const m = new Map<string, Spot>()
@@ -366,5 +474,11 @@ export function useEventRoom(eventIdStr: string) {
     mySideFor,
     people,
     move,
+    ringByHex,
+    incomingRings,
+    activeRing,
+    sendRing,
+    acceptRing,
+    dismissRing,
   }
 }

@@ -1,7 +1,14 @@
 import { Button } from '@/components/ui/button'
 import { Flower, Portrait, StatBar, initialsOf } from '@/components/cozy'
-import { avatarUrl, parseList } from '@/lib/overlap/backend'
+import { avatarUrl, parseList, type RingState } from '@/lib/overlap/backend'
 import type { Match, Profile } from '@/module_bindings/types'
+
+export type RingControl = {
+  state: RingState
+  onRing: () => void
+  onAccept: () => void
+  onStop: () => void
+}
 
 export function MatchCard({
   other,
@@ -10,6 +17,7 @@ export function MatchCard({
   onOpen,
   onBegin,
   onReRun,
+  ring,
 }: {
   other: Profile
   match?: Match
@@ -17,6 +25,7 @@ export function MatchCard({
   onOpen: () => void
   onBegin: () => void
   onReRun: () => void
+  ring?: RingControl
 }) {
   const notStarted = !match
   const status = match?.status ?? 'pending'
@@ -130,38 +139,99 @@ export function MatchCard({
         )}
 
         <div className="mt-4 flex gap-2">
-          {notStarted ? (
-            <Button
-              onClick={onBegin}
-              className="btn3d font-pixel h-auto flex-1 border-[3px] border-wood py-2.5 text-sm text-wood shadow-[0_4px_0_#2A1F18]"
-              style={{ background: 'linear-gradient(180deg,#8fd99b,#4e9e63)' }}
-            >
-              ✦ BEGIN CHAT
-            </Button>
+          {/* In-person (ring) cards have no agent chat — ringing is the only action. */}
+          {ring ? (
+            <RingButton ring={ring} />
           ) : (
-            <Button
-              onClick={onOpen}
-              className="btn3d font-pixel h-auto flex-1 border-[3px] border-wood py-2.5 text-sm text-wood shadow-[0_4px_0_#2A1F18]"
-              style={{
-                background: selected
-                  ? 'var(--goldl)'
-                  : 'linear-gradient(180deg,#F8CE6E,#EBA63A)',
-              }}
-            >
-              {selected ? '✦ WATCHING' : '▶ OPEN CHAT'}
-            </Button>
-          )}
-          {(complete || errored) && (
-            <Button
-              onClick={onReRun}
-              className="btn3d font-pixel h-auto border-[3px] border-wood px-3 py-2.5 text-sm text-wood shadow-[0_4px_0_#2A1F18]"
-              style={{ background: 'var(--parch2)' }}
-            >
-              ↻
-            </Button>
+            <>
+              {notStarted ? (
+                <Button
+                  onClick={onBegin}
+                  className="btn3d font-pixel h-auto flex-1 border-[3px] border-wood py-2.5 text-sm text-wood shadow-[0_4px_0_#2A1F18]"
+                  style={{ background: 'linear-gradient(180deg,#8fd99b,#4e9e63)' }}
+                >
+                  ✦ BEGIN CHAT
+                </Button>
+              ) : (
+                <Button
+                  onClick={onOpen}
+                  className="btn3d font-pixel h-auto flex-1 border-[3px] border-wood py-2.5 text-sm text-wood shadow-[0_4px_0_#2A1F18]"
+                  style={{
+                    background: selected
+                      ? 'var(--goldl)'
+                      : 'linear-gradient(180deg,#F8CE6E,#EBA63A)',
+                  }}
+                >
+                  {selected ? '✦ WATCHING' : '▶ OPEN CHAT'}
+                </Button>
+              )}
+              {(complete || errored) && (
+                <Button
+                  onClick={onReRun}
+                  className="btn3d font-pixel h-auto border-[3px] border-wood px-3 py-2.5 text-sm text-wood shadow-[0_4px_0_#2A1F18]"
+                  style={{ background: 'var(--parch2)' }}
+                >
+                  ↻
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
     </div>
+  )
+}
+
+// Ring beacon button. Only rendered for in-person events (when a RingControl is
+// passed). Its label/action follow the live ring state for this pair.
+function RingButton({ ring }: { ring: RingControl }) {
+  const base =
+    'btn3d font-pixel h-auto flex-1 border-[3px] border-wood px-3 py-2.5 text-sm text-wood shadow-[0_4px_0_#2A1F18]'
+
+  if (ring.state === 'active') {
+    return (
+      <Button
+        onClick={ring.onStop}
+        title="Tap when you've found each other"
+        className={`${base} blink`}
+        style={{ background: 'linear-gradient(180deg,#8fd99b,#4e9e63)' }}
+      >
+        ✓ FOUND!
+      </Button>
+    )
+  }
+  if (ring.state === 'incoming') {
+    return (
+      <Button
+        onClick={ring.onAccept}
+        title="They're ringing you — answer to start the beacon"
+        className={`${base} blink`}
+        style={{ background: 'linear-gradient(180deg,#F8CE6E,#EBA63A)' }}
+      >
+        🔔 ANSWER
+      </Button>
+    )
+  }
+  if (ring.state === 'outgoing') {
+    return (
+      <Button
+        onClick={ring.onStop}
+        title="Waiting for them to answer — tap to cancel"
+        className={base}
+        style={{ background: 'var(--parch2)' }}
+      >
+        ⏳ RINGING…
+      </Button>
+    )
+  }
+  return (
+    <Button
+      onClick={ring.onRing}
+      title="Ring them so you can find each other in the room"
+      className={base}
+      style={{ background: 'var(--parch2)' }}
+    >
+      🔔 RING
+    </Button>
   )
 }

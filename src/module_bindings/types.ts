@@ -76,3 +76,14 @@ export const Profile = __t.object("Profile", {
 });
 export type Profile = __Infer<typeof Profile>;
 
+export const Ring = __t.object("Ring", {
+  rkey: __t.string(),
+  eventId: __t.u64(),
+  fromIdentity: __t.identity(),
+  toIdentity: __t.identity(),
+  status: __t.string(),
+  createdAt: __t.timestamp(),
+  updatedAt: __t.timestamp(),
+});
+export type Ring = __Infer<typeof Ring>;
+
