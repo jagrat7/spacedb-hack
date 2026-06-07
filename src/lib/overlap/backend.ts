@@ -43,20 +43,18 @@ export function parseList(json: string): string[] {
 
 export type ProfileLite = {
   name: string
-  role: string
-  workingOn: string
-  interests: string
-  lookingFor: string
-  offer: string
+  goals: string
+  socials: string
+  bio: string
+  persona: string
 }
 
 export const toLite = (p: Profile): ProfileLite => ({
   name: p.name,
-  role: p.role,
-  workingOn: p.workingOn,
-  interests: p.interests,
-  lookingFor: p.lookingFor,
-  offer: p.offer,
+  goals: p.goals,
+  socials: p.socials,
+  bio: p.bio,
+  persona: p.persona,
 })
 
 export const avatarUrl = (seed: string) =>
@@ -167,18 +165,6 @@ export function useEventRoom(eventIdStr: string) {
       ),
     [profiles, myHex]
   )
-  const myAttendee = useMemo(
-    () =>
-      attendees.find(
-        a =>
-          eventId !== null &&
-          a.eventId === eventId &&
-          myHex &&
-          normHex(a.identity.toHexString()) === normHex(myHex)
-      ),
-    [attendees, eventId, myHex]
-  )
-
   const matchByKey = useMemo(() => {
     const m = new Map<string, Match>()
     for (const row of matches) m.set(row.pairKey, row)
@@ -202,33 +188,27 @@ export function useEventRoom(eventIdStr: string) {
     return result.sort((x, y) => (y.match?.score ?? -1) - (x.match?.score ?? -1))
   }, [attendees, profiles, matchByKey, eventId, myHex])
 
-  useEffect(() => {
-    if (eventId === null || !myAttendee || !myHex || !myProfile) return
-    const timers: ReturnType<typeof setTimeout>[] = []
+  // Matches are no longer auto-run on entry (that burned API tokens against
+  // every attendee on every visit). A match only runs when the user taps
+  // "Begin chat" → begin(), or "↻" → reRun(). triggered guards double-taps.
+  const runFor = (o: Other) => {
+    if (eventId === null || !myHex || !myProfile) return
+    runMatch({
+      data: {
+        eventId: Number(eventId),
+        aIdentity: myHex,
+        bIdentity: o.otherHex,
+        aProfile: toLite(myProfile),
+        bProfile: toLite(o.profile),
+      },
+    }).catch(() => triggered.current.delete(o.pairKey))
+  }
 
-    const fire = (o: Other) => {
-      if (triggered.current.has(o.pairKey)) return
-      triggered.current.add(o.pairKey)
-      runMatch({
-        data: {
-          eventId: Number(eventId),
-          aIdentity: myHex,
-          bIdentity: o.otherHex,
-          aProfile: toLite(myProfile),
-          bProfile: toLite(o.profile),
-        },
-      }).catch(() => triggered.current.delete(o.pairKey))
-    }
-
-    for (const o of others) {
-      if (matchByKey.has(o.pairKey)) continue
-      if (triggered.current.has(o.pairKey)) continue
-      const amCanonicalA = normHex(myHex) <= normHex(o.otherHex)
-      if (amCanonicalA) fire(o)
-      else timers.push(setTimeout(() => fire(o), 4000))
-    }
-    return () => timers.forEach(clearTimeout)
-  }, [others, eventId, myAttendee, myHex, myProfile, matchByKey])
+  const begin = (o: Other) => {
+    if (triggered.current.has(o.pairKey) || matchByKey.has(o.pairKey)) return
+    triggered.current.add(o.pairKey)
+    runFor(o)
+  }
 
   const messagesByPair = useMemo(() => {
     const m = new Map<string, AgentMessage[]>()
@@ -267,17 +247,8 @@ export function useEventRoom(eventIdStr: string) {
   }
 
   const reRun = (o: Other) => {
-    if (eventId === null || !myHex || !myProfile) return
     triggered.current.add(o.pairKey)
-    runMatch({
-      data: {
-        eventId: Number(eventId),
-        aIdentity: myHex,
-        bIdentity: o.otherHex,
-        aProfile: toLite(myProfile),
-        bProfile: toLite(o.profile),
-      },
-    }).catch(() => triggered.current.delete(o.pairKey))
+    runFor(o)
   }
 
   const mySideFor = (otherHex: string): 'a' | 'b' =>
@@ -291,6 +262,7 @@ export function useEventRoom(eventIdStr: string) {
     others,
     messagesByPair,
     onSendChat,
+    begin,
     reRun,
     mySideFor,
   }

@@ -5,8 +5,8 @@ import { generateText, generateObject } from 'ai';
 import { z } from 'zod';
 import { callReducer, querySql } from '../src/lib/spacetimedb-server';
 
-const A = { hex: 'aa00000000000000000000000000000000000000000000000000000000000001', profile: { name: 'Ada', role: 'Backend engineer', workingOn: 'a real-time DB', interests: 'distributed systems, jazz', lookingFor: 'a design partner', offer: 'systems expertise' } };
-const B = { hex: 'bb00000000000000000000000000000000000000000000000000000000000002', profile: { name: 'Grace', role: 'Product designer', workingOn: 'dev tools UX', interests: 'developer experience, jazz', lookingFor: 'engineers to build with', offer: 'product/design' } };
+const A = { hex: 'aa00000000000000000000000000000000000000000000000000000000000001', profile: { name: 'Ada', goals: 'find a design partner for my real-time DB', socials: 'github.com/ada', bio: '', persona: 'Backend engineer, calm and precise, leads with systems expertise.' } };
+const B = { hex: 'bb00000000000000000000000000000000000000000000000000000000000002', profile: { name: 'Grace', goals: 'find engineers to build dev tools with', socials: 'dribbble.com/grace', bio: '', persona: 'Product designer, warm and collaborative, leads with product/design.' } };
 const pairKey = `99:${A.hex}:${B.hex}`;
 const idArg = (h: string) => ({ __identity__: `0x${h}` });
 
@@ -31,7 +31,7 @@ async function main() {
     const self = turn % 2 === 0 ? A.profile : B.profile;
     const { text } = await generateText({
       model,
-      system: `You are ${self.name}, ${self.role}. Networking, 1-2 sentences, first person.`,
+      system: `You are an agent for ${self.name}. ${self.persona} Goals: ${self.goals}. Networking, 1-2 sentences, first person.`,
       prompt: transcript === '' ? 'Say hello.' : `So far:\n${transcript}\nReply as ${self.name}.`,
     });
     await callReducer('append_agent_turn', [pairKey, turn % 2 === 0 ? 'a' : 'b', turn, text.trim()]);

@@ -38,11 +38,10 @@ const profile = table(
   {
     identity: t.identity().primaryKey(),
     name: t.string(),
-    role: t.string(),
-    workingOn: t.string(),
-    interests: t.string(),
-    lookingFor: t.string(),
-    offer: t.string(),
+    goals: t.string(), // what they want out of the event
+    socials: t.string(), // social links the agent can mine for context
+    bio: t.string(), // AI-generated description from scraped socials
+    persona: t.string(), // how the agent should represent the human
     avatarSeed: t.string(),
   }
 );
@@ -99,13 +98,12 @@ export default spacetimedb;
 export const upsertProfile = spacetimedb.reducer(
   {
     name: t.string(),
-    role: t.string(),
-    workingOn: t.string(),
-    interests: t.string(),
-    lookingFor: t.string(),
-    offer: t.string(),
+    goals: t.string(),
+    socials: t.string(),
+    bio: t.string(),
+    persona: t.string(),
   },
-  (ctx, { name, role, workingOn, interests, lookingFor, offer }) => {
+  (ctx, { name, goals, socials, bio, persona }) => {
     const trimmedName = name.trim();
     if (!trimmedName) throw new SenderError('Name must not be empty');
 
@@ -114,11 +112,10 @@ export const upsertProfile = spacetimedb.reducer(
     const row = {
       identity: ctx.sender,
       name: trimmedName,
-      role: role.trim(),
-      workingOn: workingOn.trim(),
-      interests: interests.trim(),
-      lookingFor: lookingFor.trim(),
-      offer: offer.trim(),
+      goals: goals.trim(),
+      socials: socials.trim(),
+      bio: bio.trim(),
+      persona: persona.trim(),
       avatarSeed,
     };
     if (existing) {
@@ -126,6 +123,28 @@ export const upsertProfile = spacetimedb.reducer(
     } else {
       ctx.db.profile.insert(row);
     }
+  }
+);
+
+// Create an event if its code is free. Idempotent: calling with an existing
+// code is a no-op, so it's safe to run from seed scripts repeatedly.
+export const createEvent = spacetimedb.reducer(
+  { code: t.string(), name: t.string() },
+  (ctx, { code, name }) => {
+    const normalized = code.trim().toUpperCase();
+    if (!normalized) throw new SenderError('Event code must not be empty');
+
+    const trimmedName = name.trim();
+    if (!trimmedName) throw new SenderError('Event name must not be empty');
+
+    if (ctx.db.event.code.find(normalized)) return;
+
+    ctx.db.event.insert({
+      id: 0n,
+      code: normalized,
+      name: trimmedName,
+      createdAt: ctx.timestamp,
+    });
   }
 );
 

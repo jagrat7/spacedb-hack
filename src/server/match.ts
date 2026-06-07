@@ -8,11 +8,10 @@ import { callReducer, querySql } from '@/lib/spacetimedb-server';
 
 const ProfileLite = z.object({
   name: z.string(),
-  role: z.string(),
-  workingOn: z.string(),
-  interests: z.string(),
-  lookingFor: z.string(),
-  offer: z.string(),
+  goals: z.string(),
+  socials: z.string(),
+  bio: z.string(),
+  persona: z.string(),
 });
 type ProfileLite = z.infer<typeof ProfileLite>;
 
@@ -65,6 +64,10 @@ const Scorecard = z.object({
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const TURNS = 6; // 3 turns each, alternating, starting with speaker "a"
+
+// Server-side logs print to the terminal running `vite dev`, NOT the browser.
+const log = (...args: unknown[]) => console.log('[match]', ...args);
+
 const normHex = (hex: string) => hex.toLowerCase().replace(/^0x/, '');
 const idArg = (hex: string) => ({ __identity__: `0x${normHex(hex)}` });
 
@@ -75,11 +78,12 @@ function pairKeyFor(eventId: number, aHex: string, bHex: string): string {
 
 function systemFor(p: ProfileLite): string {
   return [
-    `You are ${p.name}, ${p.role}.`,
-    p.workingOn && `You are currently working on: ${p.workingOn}.`,
-    p.interests && `Your interests: ${p.interests}.`,
-    p.lookingFor && `At this event you are looking for: ${p.lookingFor}.`,
-    p.offer && `You can offer: ${p.offer}.`,
+    `You are an AI agent representing ${p.name} at a networking event.`,
+    p.goals && `What they want out of this event: ${p.goals}.`,
+    p.socials && `Their public profiles / social links for context: ${p.socials}.`,
+    p.bio && `Background gathered from their online presence: ${p.bio}.`,
+    p.persona && `Additional context to use when representing them: ${p.persona}.`,
+    `Speak in the first person as ${p.name}.`,
     `You are at a networking event chatting with another attendee to discover`,
     `common ground and whether you two should meet in person. Speak in the`,
     `first person, naturally, 1-2 sentences, specific and curious. Do not repeat`,
@@ -114,15 +118,12 @@ export const runMatch = createServerFn({ method: 'POST' })
       const apiKey = process.env.OPENROUTER_API_KEY;
       if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
       const openrouter = createOpenRouter({ apiKey });
-      // Conversational model for the agent dialogue.
-      const model = openrouter(
-        process.env.OPENROUTER_MODEL ?? 'anthropic/claude-3.5-haiku'
-      );
-      // Separate model for the structured scorecard — must reliably support
-      // JSON/structured output over OpenRouter (claude-3.5-haiku does not).
-      const matchModel = openrouter(
-        process.env.OPENROUTER_MATCH_MODEL ?? 'openai/gpt-4o-mini'
-      );
+      // One model drives both the agent dialogue and the structured scorecard.
+      // It must reliably support JSON/structured output over OpenRouter.
+      const modelId = process.env.OPENROUTER_MODEL ?? 'openai/gpt-4o-mini';
+      const model = openrouter(modelId);
+      const matchModel = model;
+      log(`begin ${pairKey} — ${A.profile.name} <> ${B.profile.name} (model ${modelId})`);
 
       await callReducer('begin_match', [
         pairKey,
@@ -199,14 +200,15 @@ export const runMatch = createServerFn({ method: 'POST' })
           turnText,
         ]);
         turns.push({ speaker, name: self.name, text: turnText });
+        log(`turn ${turn} (${self.name}): ${turnText}`);
       }
 
       const transcript = turns.map(t => `${t.name}: ${t.text}`).join('\n');
 
       // Produce the structured scorecard from the full transcript + profiles.
       const profileBlock = (label: string, p: ProfileLite) =>
-        `${label}: ${p.name} (${p.role}). Working on: ${p.workingOn}. ` +
-        `Interests: ${p.interests}. Looking for: ${p.lookingFor}. Offers: ${p.offer}.`;
+        `${label}: ${p.name}. Goals: ${p.goals}. ` +
+        `Socials: ${p.socials}. Background: ${p.bio}. Additional context: ${p.persona}.`;
 
       const { object: card } = await generateObject({
         model: matchModel,
@@ -227,6 +229,9 @@ export const runMatch = createServerFn({ method: 'POST' })
         ].join('\n'),
       });
 
+      log(`scorecard ${pairKey}: score=${card.score} shared=${card.metricShared} complementary=${card.metricComplementary} goals=${card.metricGoals}`);
+      log(`summary: ${card.summary}`);
+
       await callReducer('complete_match', [
         pairKey,
         card.score,
@@ -241,6 +246,7 @@ export const runMatch = createServerFn({ method: 'POST' })
       return { pairKey, status: 'complete' as const, score: card.score };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      console.error('[match] FAILED', pairKey, message);
       await callReducer('fail_match', [pairKey, message]).catch(() => {});
       return { pairKey, status: 'error' as const, error: message };
     }
@@ -265,7 +271,7 @@ export const runAgentReply = createServerFn({ method: 'POST' })
       const apiKey = process.env.OPENROUTER_API_KEY;
       if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
       const model = createOpenRouter({ apiKey })(
-        process.env.OPENROUTER_MODEL ?? 'anthropic/claude-3.5-haiku'
+        process.env.OPENROUTER_MODEL ?? 'openai/gpt-4o-mini'
       );
 
       // pairKey is `eventId:hexA:hexB` (no quotes), so this interpolation is safe.
@@ -319,9 +325,11 @@ export const runAgentReply = createServerFn({ method: 'POST' })
         text,
       ]);
 
+      log(`agent reply ${pairKey} side=${responderSide} turn=${nextTurn}: ${text}`);
       return { pairKey, ok: true as const };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      console.error('[match] agent reply FAILED', pairKey, message);
       return { pairKey, ok: false as const, error: message };
     }
   });

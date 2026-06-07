@@ -37,6 +37,7 @@ import {
 import AppendAgentTurnReducer from "./append_agent_turn_reducer";
 import BeginMatchReducer from "./begin_match_reducer";
 import CompleteMatchReducer from "./complete_match_reducer";
+import CreateEventReducer from "./create_event_reducer";
 import FailMatchReducer from "./fail_match_reducer";
 import JoinEventReducer from "./join_event_reducer";
 import SendChatMessageReducer from "./send_chat_message_reducer";
@@ -134,6 +135,7 @@ const reducersSchema = __reducers(
   __reducerSchema("append_agent_turn", AppendAgentTurnReducer),
   __reducerSchema("begin_match", BeginMatchReducer),
   __reducerSchema("complete_match", CompleteMatchReducer),
+  __reducerSchema("create_event", CreateEventReducer),
   __reducerSchema("fail_match", FailMatchReducer),
   __reducerSchema("join_event", JoinEventReducer),
   __reducerSchema("send_chat_message", SendChatMessageReducer),

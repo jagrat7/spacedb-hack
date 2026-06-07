@@ -25,11 +25,9 @@ const TOKEN_KEY = `${CLIENT_WS_HOST}/${DB_NAME}/auth_token`;
 
 type Profile = {
   name: string;
-  role: string;
-  workingOn: string;
-  interests: string;
-  lookingFor: string;
-  offer: string;
+  goals: string;
+  socials: string;
+  persona: string;
 };
 
 // A spread of personas with deliberate overlap so matches are interesting:
@@ -37,51 +35,46 @@ type Profile = {
 const USERS: Profile[] = [
   {
     name: 'Ada Okafor',
-    role: 'Backend engineer',
-    workingOn: 'a real-time multiplayer game backend on SpacetimeDB',
-    interests: 'distributed systems, databases, live jazz',
-    lookingFor: 'a designer to make the game actually feel good',
-    offer: 'deep systems + database expertise, and a working prototype',
+    goals: 'find a designer to make my real-time multiplayer game actually feel good',
+    socials: 'github.com/adaokafor, twitter.com/ada_builds, itch.io/profile/adaokafor',
+    persona:
+      'Pragmatic backend engineer building on SpacetimeDB. Lead with deep systems and database expertise and a working prototype; nerd out about distributed systems. Calm and precise.',
   },
   {
     name: 'Grace Lindqvist',
-    role: 'Product designer',
-    workingOn: 'UX for developer tools and game UIs',
-    interests: 'developer experience, motion design, jazz',
-    lookingFor: 'engineers building games or dev tools to design with',
-    offer: 'end-to-end product & interaction design',
+    goals: 'find engineers building games or dev tools who want a designer to partner with',
+    socials: 'dribbble.com/gracelind, twitter.com/gracedesigns, linkedin.com/in/gracelindqvist',
+    persona:
+      'Product designer who loves motion. Lead with end-to-end product and interaction design; be curious about the technical constraints. Warm, collaborative, detail-oriented.',
   },
   {
     name: 'Hiro Tanaka',
-    role: 'Founder / indie hacker',
-    workingOn: 'a B2B AI agents startup, pre-seed',
-    interests: 'startups, LLM agents, fundraising, climbing',
-    lookingFor: 'a technical cofounder and intros to angel investors',
-    offer: 'go-to-market, sales, and a validated pipeline of customers',
+    goals:
+      'find a technical cofounder and intros to angel investors for my pre-seed B2B AI agents startup',
+    socials: 'twitter.com/hirobuilds, github.com/hirotanaka, linkedin.com/in/hirotanaka',
+    persona:
+      'Energetic indie-hacker founder. Lead with go-to-market and sales strength and a validated customer pipeline; be upfront that I need someone technical. Keep it scrappy, not corporate.',
   },
   {
     name: 'Mara Velasquez',
-    role: 'ML engineer',
-    workingOn: 'evaluation harnesses for LLM agents',
-    interests: 'LLM agents, eval, open-source, climbing',
-    lookingFor: 'a founder with a real agent product to build the brains for',
-    offer: 'applied ML, agent orchestration, and eval tooling',
+    goals: 'find a founder with a real agent product who needs someone to build the brains',
+    socials: 'github.com/maravel, twitter.com/mara_ml, huggingface.co/maravel',
+    persona:
+      'Thoughtful ML engineer who builds eval harnesses for LLM agents. Lead with applied ML and agent orchestration depth; be curious about what people are actually shipping. Low-ego, open-source friendly.',
   },
   {
     name: 'Theo Brandt',
-    role: 'Angel investor / ex-founder',
-    workingOn: 'writing first checks into AI infra startups',
-    interests: 'AI infrastructure, developer tools, sailing',
-    lookingFor: 'early founders in AI infra and dev tools',
-    offer: 'capital, board experience, and a network of operators',
+    goals: 'meet early founders building in AI infra and developer tools',
+    socials: 'twitter.com/theobrandt, linkedin.com/in/theobrandt, theobrandt.vc',
+    persona:
+      'Angel investor and ex-founder. Lead with capital, board experience, and an operator network; ask sharp questions about the problem and the team. Direct but warm.',
   },
   {
     name: 'Priya Nair',
-    role: 'Frontend engineer',
-    workingOn: 'a React real-time collaboration app',
-    interests: 'React, real-time UIs, design systems, running',
-    lookingFor: 'backend folks doing real-time and a designer to pair with',
-    offer: 'fast, polished React frontends and design-system work',
+    goals: 'find backend folks doing real-time and a designer to pair with',
+    socials: 'github.com/priyanair, twitter.com/priyabuilds, linkedin.com/in/priyanair',
+    persona:
+      'Frontend engineer building a React real-time collaboration app. Lead with fast, polished React frontends and design-system work; be enthusiastic about real-time UIs. Friendly and precise.',
   },
 ];
 
@@ -121,11 +114,10 @@ async function main() {
     // upsert_profile uses ctx.sender, so we call it WITH this user's token.
     await callReducerAs(token, 'upsert_profile', [
       profile.name,
-      profile.role,
-      profile.workingOn,
-      profile.interests,
-      profile.lookingFor,
-      profile.offer,
+      profile.goals,
+      profile.socials,
+      '', // bio — generated from socials at runtime; empty for seeds
+      profile.persona,
     ]);
 
     // join_event also keys off ctx.sender.

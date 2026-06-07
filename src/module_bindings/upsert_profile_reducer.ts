@@ -12,9 +12,8 @@ import {
 
 export default {
   name: __t.string(),
-  role: __t.string(),
-  workingOn: __t.string(),
-  interests: __t.string(),
-  lookingFor: __t.string(),
-  offer: __t.string(),
+  goals: __t.string(),
+  socials: __t.string(),
+  bio: __t.string(),
+  persona: __t.string(),
 };

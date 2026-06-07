@@ -6,6 +6,7 @@ import {
   useAuth,
   type AuthProviderProps,
 } from 'react-oidc-context';
+import { WebStorageStateStore } from 'oidc-client-ts';
 import {
   SpacetimeDBQueryClient,
   SpacetimeDBProvider,
@@ -37,6 +38,14 @@ const oidcConfig: AuthProviderProps = {
   scope: 'openid profile email',
   response_type: 'code',
   automaticSilentRenew: true,
+  // Persist the authenticated user in localStorage (default is sessionStorage,
+  // which is per-tab and cleared on close → forces re-auth on every new tab /
+  // browser restart). Guard for SSR where `window` is undefined; the AuthProvider
+  // only mounts client-side, but this config object is evaluated at module load.
+  userStore:
+    typeof window !== 'undefined'
+      ? new WebStorageStateStore({ store: window.localStorage })
+      : undefined,
   // Strip the ?code=…&state=… off the URL after a successful login.
   onSigninCallback: () => {
     window.history.replaceState({}, document.title, window.location.pathname);

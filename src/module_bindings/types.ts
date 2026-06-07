@@ -56,11 +56,10 @@ export type Match = __Infer<typeof Match>;
 export const Profile = __t.object("Profile", {
   identity: __t.identity(),
   name: __t.string(),
-  role: __t.string(),
-  workingOn: __t.string(),
-  interests: __t.string(),
-  lookingFor: __t.string(),
-  offer: __t.string(),
+  goals: __t.string(),
+  socials: __t.string(),
+  bio: __t.string(),
+  persona: __t.string(),
   avatarSeed: __t.string(),
 });
 export type Profile = __Infer<typeof Profile>;
