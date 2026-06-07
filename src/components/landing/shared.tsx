@@ -84,7 +84,7 @@ export function ProfileBar({
 export function Signboard() {
   return (
     <div className="relative w-fit">
-      <div className="wood-panel bob flex items-center gap-2.5 px-5 py-2.5">
+      <div className="wood-panel flex items-center gap-2.5 px-5 py-2.5">
         <Leaf size={18} color="#4e9e63" />
         <span
           className="font-pixel text-2xl tracking-wide text-wood"
