@@ -53,6 +53,16 @@ export const Match = __t.object("Match", {
 });
 export type Match = __Infer<typeof Match>;
 
+export const Presence = __t.object("Presence", {
+  identity: __t.identity(),
+  eventId: __t.u64(),
+  x: __t.f32(),
+  y: __t.f32(),
+  facing: __t.string(),
+  updatedAt: __t.timestamp(),
+});
+export type Presence = __Infer<typeof Presence>;
+
 export const Profile = __t.object("Profile", {
   identity: __t.identity(),
   name: __t.string(),

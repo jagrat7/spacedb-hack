@@ -42,6 +42,98 @@ type Event = {
 // matches are interesting (some share a domain, some are complementary).
 const EVENTS: Event[] = [
   {
+    // Big mixed plaza for the demo (≥10 attendees). The lobby tips this code.
+    code: 'DEMO',
+    name: 'Overlap Demo Plaza',
+    attendees: [
+      {
+        name: 'Ada Okafor',
+        goals: 'find a designer to make my real-time multiplayer game actually feel good',
+        socials: 'github.com/adaokafor, twitter.com/ada_builds, itch.io/profile/adaokafor',
+        persona:
+          'Pragmatic backend engineer building on SpacetimeDB. Lead with deep systems and database expertise and a working prototype; nerd out about distributed systems. Calm and precise.',
+      },
+      {
+        name: 'Grace Lindqvist',
+        goals: 'find engineers building games or dev tools who want a designer to partner with',
+        socials: 'dribbble.com/gracelind, twitter.com/gracedesigns, linkedin.com/in/gracelindqvist',
+        persona:
+          'Product designer who loves motion. Lead with end-to-end product and interaction design; be curious about the technical constraints. Warm, collaborative, detail-oriented.',
+      },
+      {
+        name: 'Hiro Tanaka',
+        goals:
+          'find a technical cofounder and intros to angel investors for my pre-seed B2B AI agents startup',
+        socials: 'twitter.com/hirobuilds, github.com/hirotanaka, linkedin.com/in/hirotanaka',
+        persona:
+          'Energetic indie-hacker founder. Lead with go-to-market and sales strength and a validated customer pipeline; be upfront that I need someone technical. Keep it scrappy, not corporate.',
+      },
+      {
+        name: 'Mara Velasquez',
+        goals: 'find a founder with a real agent product who needs someone to build the brains',
+        socials: 'github.com/maravel, twitter.com/mara_ml, huggingface.co/maravel',
+        persona:
+          'Thoughtful ML engineer who builds eval harnesses for LLM agents. Lead with applied ML and agent orchestration depth; be curious about what people are actually shipping. Low-ego, open-source friendly.',
+      },
+      {
+        name: 'Theo Brandt',
+        goals: 'meet early founders building in AI infra and developer tools',
+        socials: 'twitter.com/theobrandt, linkedin.com/in/theobrandt, theobrandt.vc',
+        persona:
+          'Angel investor and ex-founder. Lead with capital, board experience, and an operator network; ask sharp questions about the problem and the team. Direct but warm.',
+      },
+      {
+        name: 'Priya Nair',
+        goals: 'find backend folks doing real-time and a designer to pair with',
+        socials: 'github.com/priyanair, twitter.com/priyabuilds, linkedin.com/in/priyanair',
+        persona:
+          'Frontend engineer building a React real-time collaboration app. Lead with fast, polished React frontends and design-system work; be enthusiastic about real-time UIs. Friendly and precise.',
+      },
+      {
+        name: 'Sofia Reyes',
+        goals: 'find builders with cool agent demos I can amplify to a big dev audience',
+        socials: 'twitter.com/sofiadevrel, github.com/sofiareyes, youtube.com/@sofiabuilds',
+        persona:
+          'Upbeat developer advocate. Lead with reach, content, and a large developer audience; be genuinely enthusiastic about clever demos and teaching. Friendly and high-energy.',
+      },
+      {
+        name: 'Kenji Mori',
+        goals: 'find an artist and a backend engineer to build multiplayer with',
+        socials: 'github.com/kenjimori, twitter.com/kenji_netcode, itch.io/profile/kenjimori',
+        persona:
+          'Gameplay programmer obsessed with netcode and rollback. Lead with low-level gameplay and networking engineering; talk shop about ECS and fighting games. Direct and a little intense.',
+      },
+      {
+        name: 'Lena Vogt',
+        goals: 'find gameplay engineers to bring my effects to life',
+        socials: 'artstation.com/lenavogt, twitter.com/lenavfx, github.com/lenavogt',
+        persona:
+          'Technical artist doing shaders and VFX. Lead with real-time VFX and a strong art-direction sense; get excited about making things look alive. Visual, expressive, generous with feedback.',
+      },
+      {
+        name: 'Nadia Haddad',
+        goals: 'find technical founders attacking unsexy industries',
+        socials: 'twitter.com/nadiahaddad, linkedin.com/in/nadiahaddad',
+        persona:
+          'Thesis-driven seed VC focused on vertical SaaS. Lead with seed capital, hiring help, and follow-on intros; probe for real domain insight. Crisp and decisive.',
+      },
+      {
+        name: 'Owen Pierce',
+        goals: 'find a seed investor who gets bootstrapped-to-venture',
+        socials: 'twitter.com/owenbuilds, linkedin.com/in/owenpierce',
+        persona:
+          'Bootstrapped solo founder building fintech for freelancers. Lead with a profitable product and real revenue traction; be candid about wanting capital without losing scrappiness. Pragmatic and confident.',
+      },
+      {
+        name: 'Sam Castellano',
+        goals: 'find a team that needs someone to make their infra boringly reliable',
+        socials: 'github.com/samcastellano, twitter.com/sam_ops, linkedin.com/in/samcastellano',
+        persona:
+          'Easygoing platform/DevOps engineer. Lead with CI/CD, observability, and scaling experience; be the calm one who keeps things shipping. Helpful, dry sense of humor.',
+      },
+    ],
+  },
+  {
     code: 'AIHACK',
     name: 'AI Builders Hack Night',
     attendees: [

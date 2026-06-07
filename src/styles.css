@@ -468,3 +468,55 @@
   50% { transform: rotate(1.2deg); }
 }
 .wind { transform-origin: bottom center; animation: wind 6s ease-in-out infinite; }
+
+/* ====================================================================
+   Plaza — top-down avatar world: walk bob, match-line pulse, shadows
+   ==================================================================== */
+
+/* avatar idle bob; a brisker step when walking */
+@keyframes avatarIdle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+@keyframes avatarWalk {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-4px) rotate(2deg); }
+}
+.av-idle { animation: avatarIdle 2.2s ease-in-out infinite; }
+.av-walk { animation: avatarWalk 0.32s ease-in-out infinite; }
+
+/* glowing match line between two chatting agents */
+@keyframes plazaPulse {
+  0%, 100% { opacity: 0.55; stroke-width: 2.5; }
+  50% { opacity: 1; stroke-width: 4.5; }
+}
+.plaza-line {
+  animation: plazaPulse 1.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 5px rgba(235, 166, 58, 0.9));
+}
+/* data-flow dashes travelling along the line */
+@keyframes plazaDash {
+  to { stroke-dashoffset: -16; }
+}
+.plaza-dash { animation: plazaDash 0.7s linear infinite; }
+
+/* soft ground shadow under each avatar */
+.av-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  width: 30px;
+  height: 9px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgba(40, 28, 16, 0.34);
+  filter: blur(2px);
+  z-index: -1;
+}
+
+/* introduce prompt pop above a nearby avatar */
+@keyframes promptPop {
+  0% { transform: translate(-50%, 6px) scale(0.85); opacity: 0; }
+  100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+}
+.av-prompt { animation: promptPop 0.18s cubic-bezier(0.3, 1.4, 0.5, 1) forwards; }

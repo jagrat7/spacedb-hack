@@ -23,6 +23,7 @@ export function MatchCard({
   const complete = status === 'complete'
   const errored = status === 'error'
   const commonGround = match ? parseList(match.commonGround) : []
+  const icebreakers = match ? parseList(match.icebreakers) : []
 
   return (
     <div className={`quest-card pinned relative ${selected ? 'selected' : ''}`}>
@@ -90,6 +91,31 @@ export function MatchCard({
                     {t}
                   </span>
                 ))}
+              </div>
+            )}
+
+            {match.summary && (
+              <p className="mt-3 font-sans text-sm font-semibold leading-snug text-wood2">
+                {match.summary}
+              </p>
+            )}
+
+            {icebreakers.length > 0 && (
+              <div className="mt-3">
+                <div className="font-pixel mb-1.5 text-xs text-wood">
+                  ✦ Icebreakers
+                </div>
+                <ul className="flex flex-col gap-1.5">
+                  {icebreakers.map(ice => (
+                    <li
+                      key={ice}
+                      className="flex gap-2 font-sans text-sm font-semibold text-wood2"
+                    >
+                      <span className="text-goldd">›</span>
+                      <span className="min-w-0">{ice}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </>

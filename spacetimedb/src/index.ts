@@ -90,7 +90,34 @@ const agentMessage = table(
   }
 );
 
-const spacetimedb = schema({ event, attendee, profile, match, agentMessage });
+// Live plaza position for an attendee. Keyed by identity (you occupy one plaza
+// at a time); eventId scopes which room you're standing in. x/y are normalized
+// 0..1 so the client maps them onto whatever the plaza is sized to. facing is
+// 'left' | 'right' for sprite flip. Last-write-wins; clients throttle writes.
+const presence = table(
+  {
+    name: 'presence',
+    public: true,
+    indexes: [{ accessor: 'by_event', algorithm: 'btree', columns: ['eventId'] }],
+  },
+  {
+    identity: t.identity().primaryKey(),
+    eventId: t.u64(),
+    x: t.f32(),
+    y: t.f32(),
+    facing: t.string(),
+    updatedAt: t.timestamp(),
+  }
+);
+
+const spacetimedb = schema({
+  event,
+  attendee,
+  profile,
+  match,
+  agentMessage,
+  presence,
+});
 export default spacetimedb;
 
 // ── Client-callable reducers ────────────────────────────────────────────────
@@ -122,6 +149,30 @@ export const upsertProfile = spacetimedb.reducer(
       ctx.db.profile.identity.update(row);
     } else {
       ctx.db.profile.insert(row);
+    }
+  }
+);
+
+// Move (or spawn) the caller's avatar in the plaza. Clamps to the [0,1] box so
+// a buggy client can't fling an avatar off-screen. Upsert by identity.
+export const updatePosition = spacetimedb.reducer(
+  { eventId: t.u64(), x: t.f32(), y: t.f32(), facing: t.string() },
+  (ctx, { eventId, x, y, facing }) => {
+    const clamp = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
+    const dir = facing === 'left' ? 'left' : 'right';
+    const row = {
+      identity: ctx.sender,
+      eventId,
+      x: clamp(x),
+      y: clamp(y),
+      facing: dir,
+      updatedAt: ctx.timestamp,
+    };
+    const existing = ctx.db.presence.identity.find(ctx.sender);
+    if (existing) {
+      ctx.db.presence.identity.update(row);
+    } else {
+      ctx.db.presence.insert(row);
     }
   }
 );

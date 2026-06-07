@@ -2,7 +2,7 @@
   "dev": {
     "run": "bun run dev"
   },
-  "database": "overlap",
+  "database": "overlap-v2",
   "module-path": "./spacetimedb",
   "server": "maincloud"
 }

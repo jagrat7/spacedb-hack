@@ -41,6 +41,7 @@ import CreateEventReducer from "./create_event_reducer";
 import FailMatchReducer from "./fail_match_reducer";
 import JoinEventReducer from "./join_event_reducer";
 import SendChatMessageReducer from "./send_chat_message_reducer";
+import UpdatePositionReducer from "./update_position_reducer";
 import UpsertProfileReducer from "./upsert_profile_reducer";
 
 // Import all procedure arg schemas
@@ -50,6 +51,7 @@ import AgentMessageRow from "./agent_message_table";
 import AttendeeRow from "./attendee_table";
 import EventRow from "./event_table";
 import MatchRow from "./match_table";
+import PresenceRow from "./presence_table";
 import ProfileRow from "./profile_table";
 
 /** Type-only namespace exports for generated type groups. */
@@ -117,6 +119,20 @@ const tablesSchema = __schema({
       { name: 'match_pair_key_key', constraint: 'unique', columns: ['pairKey'] },
     ],
   }, MatchRow),
+  presence: __table({
+    name: 'presence',
+    indexes: [
+      { accessor: 'by_event', name: 'presence_event_id_idx_btree', algorithm: 'btree', columns: [
+        'eventId',
+      ] },
+      { accessor: 'identity', name: 'presence_identity_idx_btree', algorithm: 'btree', columns: [
+        'identity',
+      ] },
+    ],
+    constraints: [
+      { name: 'presence_identity_key', constraint: 'unique', columns: ['identity'] },
+    ],
+  }, PresenceRow),
   profile: __table({
     name: 'profile',
     indexes: [
@@ -139,6 +155,7 @@ const reducersSchema = __reducers(
   __reducerSchema("fail_match", FailMatchReducer),
   __reducerSchema("join_event", JoinEventReducer),
   __reducerSchema("send_chat_message", SendChatMessageReducer),
+  __reducerSchema("update_position", UpdatePositionReducer),
   __reducerSchema("upsert_profile", UpsertProfileReducer),
 );
 
