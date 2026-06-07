@@ -13,6 +13,7 @@ import {
 } from 'spacetimedb/tanstack';
 import { DbConnection, ErrorContext } from './module_bindings';
 import { Button } from './components/ui/button';
+import { AUTH_DISABLED } from './lib/auth-config';
 
 const HOST =
   import.meta.env.VITE_SPACETIMEDB_HOST ?? 'wss://maincloud.spacetimedb.com';
@@ -84,6 +85,26 @@ function FullScreen({ children }: { children: React.ReactNode }) {
     <div className="relative z-10 grid min-h-screen place-items-center p-6 text-center">
       <div className="flex flex-col items-center gap-4 max-w-sm">{children}</div>
     </div>
+  );
+}
+
+/** Anonymous SpacetimeDB connection — no OIDC login required. */
+function SpacetimeAnonymous({ children }: { children: React.ReactNode }) {
+  const connectionBuilder = useMemo(
+    () =>
+      DbConnection.builder()
+        .withUri(HOST)
+        .withDatabaseName(DB_NAME)
+        .onConnect(onConnect)
+        .onDisconnect(onDisconnect)
+        .onConnectError(onConnectError),
+    []
+  );
+
+  return (
+    <SpacetimeDBProvider connectionBuilder={connectionBuilder}>
+      {children}
+    </SpacetimeDBProvider>
   );
 }
 
@@ -171,6 +192,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <p className="text-sm text-muted-foreground">Loading Overlap…</p>
       </FullScreen>
     );
+  }
+
+  if (AUTH_DISABLED) {
+    return <SpacetimeAnonymous>{children}</SpacetimeAnonymous>;
   }
 
   return (

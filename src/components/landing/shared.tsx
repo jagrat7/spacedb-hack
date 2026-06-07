@@ -45,7 +45,7 @@ export function ProfileBar({
   role: string
   avatarSeed?: string
   onEdit: () => void
-  onSignOut: () => void
+  onSignOut?: () => void
 }) {
   return (
     <div className="wood-panel flex w-full items-center gap-2.5 px-3 py-2 sm:w-auto sm:gap-3 sm:px-4 sm:py-2.5">
@@ -70,9 +70,11 @@ export function ProfileBar({
         <CozyBtn variant="gold" onClick={onEdit}>
           ✎ EDIT
         </CozyBtn>
-        <CozyBtn variant="parch" onClick={onSignOut}>
-          SIGN OUT
-        </CozyBtn>
+        {onSignOut && (
+          <CozyBtn variant="parch" onClick={onSignOut}>
+            SIGN OUT
+          </CozyBtn>
+        )}
       </div>
     </div>
   )

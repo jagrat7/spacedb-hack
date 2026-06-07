@@ -1,6 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 import { useAuth } from 'react-oidc-context'
+import { AUTH_DISABLED } from '@/lib/auth-config'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Leaf, LeafSpray, Sparkles } from '@/components/cozy'
@@ -94,9 +95,31 @@ function EventCard({
 /* ------------------------------------------------------------------ *
  * Event lobby — join by code + my events                             *
  * ------------------------------------------------------------------ */
+function ProfileBarWithAuth({
+  name,
+  role,
+  avatarSeed,
+  onEdit,
+}: {
+  name: string
+  role: string
+  avatarSeed?: string
+  onEdit: () => void
+}) {
+  const auth = useAuth()
+  return (
+    <ProfileBar
+      name={name}
+      role={role}
+      avatarSeed={avatarSeed}
+      onEdit={onEdit}
+      onSignOut={() => auth.signoutRedirect()}
+    />
+  )
+}
+
 export function Lobby({ onEdit }: { onEdit: () => void }) {
   const navigate = useNavigate()
-  const auth = useAuth()
   const { myProfile, events, myEvents, joinEvent } = useOverlapHome()
 
   const [code, setCode] = useState('')
@@ -133,13 +156,21 @@ export function Lobby({ onEdit }: { onEdit: () => void }) {
       {/* header */}
       <header className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Signboard />
-        <ProfileBar
-          name={myProfile?.name ?? ''}
-          role={myProfile?.goals ?? ''}
-          avatarSeed={myProfile?.avatarSeed}
-          onEdit={onEdit}
-          onSignOut={() => auth.signoutRedirect()}
-        />
+        {AUTH_DISABLED ? (
+          <ProfileBar
+            name={myProfile?.name ?? ''}
+            role={myProfile?.goals ?? ''}
+            avatarSeed={myProfile?.avatarSeed}
+            onEdit={onEdit}
+          />
+        ) : (
+          <ProfileBarWithAuth
+            name={myProfile?.name ?? ''}
+            role={myProfile?.goals ?? ''}
+            avatarSeed={myProfile?.avatarSeed}
+            onEdit={onEdit}
+          />
+        )}
       </header>
 
       {/* join by code */}
