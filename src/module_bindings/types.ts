@@ -28,6 +28,15 @@ export const Attendee = __t.object("Attendee", {
 });
 export type Attendee = __Infer<typeof Attendee>;
 
+export const Billboard = __t.object("Billboard", {
+  eventId: __t.u64(),
+  message: __t.string(),
+  authorName: __t.string(),
+  authorIdentity: __t.identity(),
+  updatedAt: __t.timestamp(),
+});
+export type Billboard = __Infer<typeof Billboard>;
+
 export const Event = __t.object("Event", {
   id: __t.u64(),
   code: __t.string(),

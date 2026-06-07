@@ -139,6 +139,20 @@ const ring = table(
   }
 );
 
+// A shared "billboard" in each plaza: one custom message per event that any
+// attendee can overwrite. Last-write-wins, keyed by eventId, so the whole room
+// sees the same note. authorName/authorIdentity record who posted it last.
+const billboard = table(
+  { name: 'billboard', public: true },
+  {
+    eventId: t.u64().primaryKey(),
+    message: t.string(),
+    authorName: t.string(),
+    authorIdentity: t.identity(),
+    updatedAt: t.timestamp(),
+  }
+);
+
 const spacetimedb = schema({
   event,
   attendee,
@@ -147,6 +161,7 @@ const spacetimedb = schema({
   agentMessage,
   presence,
   ring,
+  billboard,
 });
 export default spacetimedb;
 
@@ -335,6 +350,40 @@ export const sendChatMessage = spacetimedb.reducer(
       text: trimmed,
       createdAt: ctx.timestamp,
     });
+  }
+);
+
+// Post (or overwrite) the plaza billboard for an event. Any attendee of the
+// event may set it; the whole room then sees the same message. Last-write-wins.
+export const setBillboard = spacetimedb.reducer(
+  { eventId: t.u64(), message: t.string() },
+  (ctx, { eventId, message }) => {
+    const trimmed = message.trim();
+    if (!trimmed) throw new SenderError('Message must not be empty');
+    if (trimmed.length > 140) {
+      throw new SenderError('Message too long (max 140 characters)');
+    }
+
+    const mine = [
+      ...ctx.db.attendee.by_event_identity.filter([eventId, ctx.sender]),
+    ];
+    if (mine.length === 0) {
+      throw new SenderError('Must be in this event to post to the billboard');
+    }
+
+    const prof = ctx.db.profile.identity.find(ctx.sender);
+    const row = {
+      eventId,
+      message: trimmed,
+      authorName: prof?.name ?? 'Someone',
+      authorIdentity: ctx.sender,
+      updatedAt: ctx.timestamp,
+    };
+    if (ctx.db.billboard.eventId.find(eventId)) {
+      ctx.db.billboard.eventId.update(row);
+    } else {
+      ctx.db.billboard.insert(row);
+    }
   }
 );
 

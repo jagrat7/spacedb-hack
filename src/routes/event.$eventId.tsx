@@ -34,6 +34,8 @@ function EventRoom() {
     mySideFor,
     people,
     move,
+    billboard,
+    setBillboard,
     openPlazaChat,
     onSendDirectChat,
     ringByHex,
@@ -220,6 +222,21 @@ function EventRoom() {
                     selectedKey={selectedKey}
                     onMove={move}
                     onTalkTo={talkInPlaza}
+                    event={{
+                      name: event.name,
+                      code: event.code,
+                      isOnline: event.isOnline,
+                    }}
+                    attendeeCount={people.length}
+                    billboard={
+                      billboard
+                        ? {
+                            message: billboard.message,
+                            authorName: billboard.authorName,
+                          }
+                        : null
+                    }
+                    onSetBillboard={setBillboard}
                   />
                 </div>
               </div>

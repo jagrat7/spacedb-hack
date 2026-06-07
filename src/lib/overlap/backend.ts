@@ -11,6 +11,7 @@ import {
 import { DbConnection, reducers, tables } from '../../module_bindings'
 import type {
   AgentMessage,
+  Billboard,
   Event as OverlapEvent,
   Match,
   Profile,
@@ -148,6 +149,20 @@ function useRingSubscription() {
   }, [isActive, getConnection])
 }
 
+function useBillboardSubscription() {
+  const { isActive, getConnection } = useSpacetimeDB()
+  useEffect(() => {
+    if (!isActive) return
+    const conn = getConnection() as DbConnection | null
+    if (!conn) return
+    try {
+      conn.subscriptionBuilder().subscribe([tables.billboard])
+    } catch {
+      // table not published yet — billboard degrades to empty
+    }
+  }, [isActive, getConnection])
+}
+
 export function spawnSpot(hex: string): Spot {
   const h = normHex(hex)
   let a = 0
@@ -211,6 +226,7 @@ export function useEventRoom(eventIdStr: string) {
   useOverlapSubscriptions()
   usePresenceSubscription()
   useRingSubscription()
+  useBillboardSubscription()
 
   const [profiles] = useSpacetimeDBQuery(tables.profile)
   const [events] = useSpacetimeDBQuery(tables.event)
@@ -219,6 +235,7 @@ export function useEventRoom(eventIdStr: string) {
   const [agentMessages] = useSpacetimeDBQuery(tables.agentMessage)
   const [presences] = useSpacetimeDBQuery(tables.presence)
   const [rings] = useSpacetimeDBQuery(tables.ring)
+  const [billboards] = useSpacetimeDBQuery(tables.billboard)
 
   const sendChatMessage = useReducer(reducers.sendChatMessage)
   const openPlazaChatReducer = useReducer(reducers.openPlazaChat)
@@ -226,6 +243,7 @@ export function useEventRoom(eventIdStr: string) {
   const sendRingReducer = useReducer(reducers.sendRing)
   const acceptRingReducer = useReducer(reducers.acceptRing)
   const dismissRingReducer = useReducer(reducers.dismissRing)
+  const setBillboardReducer = useReducer(reducers.setBillboard)
   const triggered = useRef(new Set<string>())
 
   const eventId = useMemo<bigint | null>(() => {
@@ -253,6 +271,15 @@ export function useEventRoom(eventIdStr: string) {
     for (const row of matches) m.set(row.pairKey, row)
     return m
   }, [matches])
+
+  // The shared plaza billboard for this event (one row, or none yet).
+  const billboard = useMemo<Billboard | undefined>(
+    () =>
+      eventId === null
+        ? undefined
+        : billboards.find(b => b.eventId === eventId),
+    [billboards, eventId]
+  )
 
   // Identities with a live presence row in this event — i.e. real, connected
   // users driving their avatar. Anyone else (seeded NPCs) wanders client-side.
@@ -408,6 +435,11 @@ export function useEventRoom(eventIdStr: string) {
     updatePosition({ eventId, x, y, facing })
   }
 
+  const setBillboard = (message: string) => {
+    if (eventId === null || !message.trim()) return
+    setBillboardReducer({ eventId, message: message.trim() })
+  }
+
   // Matches are no longer auto-run on entry (that burned API tokens against
   // every attendee on every visit). A match only runs when the user taps
   // "Begin chat" → begin(), or "↻" → reRun(). triggered guards double-taps.
@@ -499,6 +531,8 @@ export function useEventRoom(eventIdStr: string) {
     mySideFor,
     people,
     move,
+    billboard,
+    setBillboard,
     ringByHex,
     incomingRings,
     activeRing,

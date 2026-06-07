@@ -17,6 +17,7 @@ import JoinEventReducer from "../join_event_reducer";
 import OpenPlazaChatReducer from "../open_plaza_chat_reducer";
 import SendChatMessageReducer from "../send_chat_message_reducer";
 import SendRingReducer from "../send_ring_reducer";
+import SetBillboardReducer from "../set_billboard_reducer";
 import UpdatePositionReducer from "../update_position_reducer";
 import UpsertProfileReducer from "../upsert_profile_reducer";
 
@@ -31,6 +32,7 @@ export type JoinEventParams = __Infer<typeof JoinEventReducer>;
 export type OpenPlazaChatParams = __Infer<typeof OpenPlazaChatReducer>;
 export type SendChatMessageParams = __Infer<typeof SendChatMessageReducer>;
 export type SendRingParams = __Infer<typeof SendRingReducer>;
+export type SetBillboardParams = __Infer<typeof SetBillboardReducer>;
 export type UpdatePositionParams = __Infer<typeof UpdatePositionReducer>;
 export type UpsertProfileParams = __Infer<typeof UpsertProfileReducer>;
 

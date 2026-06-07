@@ -45,6 +45,7 @@ import JoinEventReducer from "./join_event_reducer";
 import OpenPlazaChatReducer from "./open_plaza_chat_reducer";
 import SendChatMessageReducer from "./send_chat_message_reducer";
 import SendRingReducer from "./send_ring_reducer";
+import SetBillboardReducer from "./set_billboard_reducer";
 import UpdatePositionReducer from "./update_position_reducer";
 import UpsertProfileReducer from "./upsert_profile_reducer";
 
@@ -53,6 +54,7 @@ import UpsertProfileReducer from "./upsert_profile_reducer";
 // Import all table schema definitions
 import AgentMessageRow from "./agent_message_table";
 import AttendeeRow from "./attendee_table";
+import BillboardRow from "./billboard_table";
 import EventRow from "./event_table";
 import MatchRow from "./match_table";
 import PresenceRow from "./presence_table";
@@ -95,6 +97,17 @@ const tablesSchema = __schema({
       { name: 'attendee_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, AttendeeRow),
+  billboard: __table({
+    name: 'billboard',
+    indexes: [
+      { accessor: 'eventId', name: 'billboard_event_id_idx_btree', algorithm: 'btree', columns: [
+        'eventId',
+      ] },
+    ],
+    constraints: [
+      { name: 'billboard_event_id_key', constraint: 'unique', columns: ['eventId'] },
+    ],
+  }, BillboardRow),
   event: __table({
     name: 'event',
     indexes: [
@@ -184,6 +197,7 @@ const reducersSchema = __reducers(
   __reducerSchema("open_plaza_chat", OpenPlazaChatReducer),
   __reducerSchema("send_chat_message", SendChatMessageReducer),
   __reducerSchema("send_ring", SendRingReducer),
+  __reducerSchema("set_billboard", SetBillboardReducer),
   __reducerSchema("update_position", UpdatePositionReducer),
   __reducerSchema("upsert_profile", UpsertProfileReducer),
 );

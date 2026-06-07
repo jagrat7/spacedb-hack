@@ -63,16 +63,18 @@ type PropKind =
   | 'barrel'
   | 'flowers'
   | 'fence'
+  | 'fortune' // fortune teller's tent (interactive station)
+  | 'info-desk' // event info desk (interactive station)
+  | 'billboard' // shared community billboard (interactive station)
 
 type VProp = { x: number; y: number; kind: PropKind; scale?: number }
 
 // Layout: houses ring the edges, trees/bushes soften the corners, a fountain
 // anchors the upper plaza, a market stall + lamps frame the lower walkway.
 const PROPS: VProp[] = [
-  // houses around the perimeter
-  { x: 0.11, y: 0.2, kind: 'house-red', scale: 1.1 },
+  // houses around the perimeter (three of the old houses/stall are now the
+  // interactive stations below — see STATIONS)
   { x: 0.88, y: 0.18, kind: 'house-blue', scale: 1.1 },
-  { x: 0.9, y: 0.8, kind: 'house-green', scale: 1.05 },
   { x: 0.1, y: 0.82, kind: 'house-tan', scale: 1.05 },
   { x: 0.5, y: 0.12, kind: 'house-blue', scale: 0.85 },
   // centerpiece fountain (upper-middle so the walkway stays clear)
@@ -86,8 +88,7 @@ const PROPS: VProp[] = [
   { x: 0.64, y: 0.94, kind: 'pine', scale: 0.95 },
   { x: 0.8, y: 0.6, kind: 'tree', scale: 0.85 },
   { x: 0.2, y: 0.58, kind: 'pine', scale: 0.85 },
-  // market stall + lamps along the lower plaza
-  { x: 0.5, y: 0.84, kind: 'stall', scale: 1.1 },
+  // lamps along the lower plaza
   { x: 0.38, y: 0.24, kind: 'lamp' },
   { x: 0.62, y: 0.7, kind: 'lamp' },
   // small props
@@ -98,6 +99,30 @@ const PROPS: VProp[] = [
   { x: 0.43, y: 0.62, kind: 'flowers' },
   { x: 0.58, y: 0.5, kind: 'flowers' },
   { x: 0.3, y: 0.74, kind: 'flowers' },
+]
+
+// Interactive stations: walk up and press ↵ (or click) to interact. Placed
+// where the old props were so the layout stays familiar.
+type StationKind = 'fortune' | 'info-desk' | 'billboard'
+type Station = { id: StationKind; x: number; y: number; scale: number; label: string }
+const STATIONS: Station[] = [
+  { id: 'fortune', x: 0.5, y: 0.84, scale: 1.1, label: 'Fortune Teller' },
+  { id: 'info-desk', x: 0.11, y: 0.2, scale: 1.05, label: 'Info Desk' },
+  { id: 'billboard', x: 0.82, y: 0.82, scale: 1.35, label: 'Billboard' },
+]
+
+// Little fortunes the teller hands out, picked at random each visit.
+const FORTUNES = [
+  'A kindred spirit is closer than you think — keep wandering.',
+  'The best conversation tonight starts with a question, not a pitch.',
+  'Someone here shares your obscure obsession. Go find them.',
+  'Say yes to the next introduction. It pays off.',
+  'Your next collaborator is two avatars away.',
+  'Lead with curiosity and the room opens up.',
+  'A small spark now becomes a big project later.',
+  'The quiet one by the fountain has the most to say.',
+  'Trade a goal for a goal — you’ll both leave richer.',
+  'Luck favors the attendee who speaks first.',
 ]
 
 /** A single pixel-styled village prop, drawn at a fixed size, base on the ground. */
@@ -211,6 +236,89 @@ function VillageProp({ kind, scale = 1 }: { kind: PropKind; scale?: number }) {
           <circle cx="22" cy="36" r="4" fill="#e0563f" stroke={stroke} strokeWidth="1.5" />
           <circle cx="33" cy="36" r="4" fill="#f0a83a" stroke={stroke} strokeWidth="1.5" />
           <circle cx="44" cy="36" r="4" fill="#7cbb6a" stroke={stroke} strokeWidth="1.5" />
+        </svg>
+      )
+    case 'fortune':
+      // a mystic's tent: purple canopy, star, glowing crystal-ball doorway
+      return (
+        <svg width={72 * scale} height={68 * scale} viewBox="0 0 72 68" shapeRendering="crispEdges">
+          {/* tent body */}
+          <path d="M10 28 L36 18 L62 28 L58 62 L14 62 Z" fill="#7a4f9e" stroke={stroke} strokeWidth="2" strokeLinejoin="round" />
+          {/* canopy */}
+          <path d="M6 30 Q36 12 66 30 L60 30 Q36 18 12 30 Z" fill="#9b6bc4" stroke={stroke} strokeWidth="2" strokeLinejoin="round" />
+          {/* scalloped trim */}
+          <g fill="#f6d469" stroke={stroke} strokeWidth="1">
+            <circle cx="16" cy="31" r="3" />
+            <circle cx="28" cy="30" r="3" />
+            <circle cx="40" cy="30" r="3" />
+            <circle cx="52" cy="31" r="3" />
+          </g>
+          {/* doorway with crystal ball */}
+          <path d="M28 62 L28 40 Q36 34 44 40 L44 62 Z" fill="#2c1b40" stroke={stroke} strokeWidth="2" />
+          <circle cx="36" cy="50" r="7" fill="#bfe7f5" stroke={stroke} strokeWidth="1.5" />
+          <circle cx="34" cy="48" r="2" fill="#fff" opacity="0.85" />
+          {/* finial star */}
+          <path d="M36 4 l2 5 5 1 -4 4 1 5 -4 -3 -4 3 1 -5 -4 -4 5 -1 z" fill="#f6d469" stroke={stroke} strokeWidth="1" strokeLinejoin="round" />
+        </svg>
+      )
+    case 'info-desk':
+      // a kiosk with an "i" sign and an awning
+      return (
+        <svg width={68 * scale} height={64 * scale} viewBox="0 0 68 64" shapeRendering="crispEdges">
+          {/* sign post + board */}
+          <rect x="31" y="20" width="6" height="14" fill="#6e4a2f" stroke={stroke} strokeWidth="1.5" />
+          <circle cx="34" cy="12" r="11" fill="#4e9e63" stroke={stroke} strokeWidth="2" />
+          <rect x="32" y="6" width="4" height="4" rx="1" fill="#fff" />
+          <rect x="32" y="11" width="4" height="8" rx="1" fill="#fff" />
+          {/* counter */}
+          <rect x="8" y="34" width="52" height="24" rx="2" fill="#cda86a" stroke={stroke} strokeWidth="2" />
+          <rect x="8" y="34" width="52" height="7" fill="#b5824e" stroke={stroke} strokeWidth="2" />
+          {/* striped awning */}
+          <rect x="6" y="28" width="56" height="8" rx="2" fill="#4e8fb0" stroke={stroke} strokeWidth="2" />
+          <g fill="#eaf4fb">
+            <rect x="14" y="28" width="8" height="8" />
+            <rect x="30" y="28" width="8" height="8" />
+            <rect x="46" y="28" width="8" height="8" />
+          </g>
+          <rect x="6" y="28" width="56" height="8" rx="2" fill="none" stroke={stroke} strokeWidth="2" />
+          {/* front panel detail */}
+          <rect x="16" y="44" width="14" height="10" rx="1.5" fill="#f6e9b0" stroke={stroke} strokeWidth="1.5" />
+          <rect x="38" y="44" width="14" height="10" rx="1.5" fill="#f6e9b0" stroke={stroke} strokeWidth="1.5" />
+        </svg>
+      )
+    case 'billboard':
+      // a big roadside ad billboard: bright lit panel on steel posts, ringed
+      // with marquee bulbs. The message is overlaid on the panel in the caller.
+      return (
+        <svg width={92 * scale} height={84 * scale} viewBox="0 0 116 104" shapeRendering="crispEdges">
+          {/* support posts + cross brace */}
+          <rect x="30" y="58" width="9" height="44" fill="#6b6f78" stroke={stroke} strokeWidth="2" />
+          <rect x="77" y="58" width="9" height="44" fill="#6b6f78" stroke={stroke} strokeWidth="2" />
+          <rect x="34" y="74" width="48" height="6" fill="#565a62" stroke={stroke} strokeWidth="1.5" />
+          {/* footings */}
+          <rect x="26" y="99" width="17" height="5" rx="1" fill="#3a2c22" stroke={stroke} strokeWidth="1.5" />
+          <rect x="73" y="99" width="17" height="5" rx="1" fill="#3a2c22" stroke={stroke} strokeWidth="1.5" />
+          {/* outer frame */}
+          <rect x="4" y="4" width="108" height="58" rx="3" fill="#2f3b52" stroke={stroke} strokeWidth="2.5" />
+          {/* header strip */}
+          <rect x="9" y="8" width="98" height="11" rx="1.5" fill="#e0563f" stroke={stroke} strokeWidth="1.5" />
+          {/* bright display panel */}
+          <rect x="9" y="20" width="98" height="38" rx="1.5" fill="#fdfbf0" stroke={stroke} strokeWidth="2" />
+          {/* marquee bulbs around the frame */}
+          <g fill="#ffe07a" stroke={stroke} strokeWidth="0.6">
+            {[10, 24, 38, 52, 66, 80, 94, 106].map(x => (
+              <circle key={`t${x}`} cx={x} cy="4" r="2.4" />
+            ))}
+            {[10, 24, 38, 52, 66, 80, 94, 106].map(x => (
+              <circle key={`b${x}`} cx={x} cy="62" r="2.4" />
+            ))}
+            {[12, 26, 40, 54].map(y => (
+              <circle key={`l${y}`} cx="4" cy={y} r="2.4" />
+            ))}
+            {[12, 26, 40, 54].map(y => (
+              <circle key={`r${y}`} cx="112" cy={y} r="2.4" />
+            ))}
+          </g>
         </svg>
       )
     case 'barrel':
@@ -402,11 +510,20 @@ export function Plaza({
   selectedKey,
   onMove,
   onTalkTo,
+  event,
+  attendeeCount = 0,
+  billboard,
+  onSetBillboard,
 }: {
   people: PlazaPerson[]
   selectedKey?: string
   onMove: (x: number, y: number, facing: Facing) => void
   onTalkTo: (person: PlazaPerson) => void
+  // Info-desk content + shared billboard (the interactive stations).
+  event?: { name: string; code: string; isOnline: boolean } | null
+  attendeeCount?: number
+  billboard?: { message: string; authorName: string } | null
+  onSetBillboard?: (message: string) => void
 }) {
   const me = useMemo(() => people.find(p => p.isMe), [people])
   const others = useMemo(() => people.filter(p => !p.isMe), [people])
@@ -437,6 +554,38 @@ export function Plaza({
   const [nearHex, setNearHex] = useState<string | null>(null)
   const nearHexRef = useRef<string | null>(null)
   nearHexRef.current = nearHex
+
+  // Nearest interactive station (within range) + which of person/station is the
+  // closest thing to interact with, so only one ↵ prompt shows at a time.
+  const [nearStation, setNearStation] = useState<StationKind | null>(null)
+  const nearStationRef = useRef<StationKind | null>(null)
+  nearStationRef.current = nearStation
+  const [primary, setPrimary] = useState<'person' | 'station' | null>(null)
+  const primaryRef = useRef<'person' | 'station' | null>(null)
+  primaryRef.current = primary
+
+  // Which station modal is open (null = none), plus its transient UI state.
+  const [openStation, setOpenStation] = useState<StationKind | null>(null)
+  const openStationRef = useRef<StationKind | null>(null)
+  openStationRef.current = openStation
+  const [fortune, setFortune] = useState('')
+  const [draft, setDraft] = useState('')
+
+  const billboardRef = useRef(billboard)
+  billboardRef.current = billboard
+
+  // Open a station's modal, seeding its transient state. Held in a ref so the
+  // once-bound keyboard listener always calls the latest closure.
+  const openStationModal = (id: StationKind) => {
+    if (id === 'fortune') {
+      setFortune(FORTUNES[Math.floor(Math.random() * FORTUNES.length)])
+    } else if (id === 'billboard') {
+      setDraft(billboardRef.current?.message ?? '')
+    }
+    setOpenStation(id)
+  }
+  const openStationRefFn = useRef(openStationModal)
+  openStationRefFn.current = openStationModal
 
   const boxRef = useRef<HTMLDivElement>(null)
   const dims = useRef({ w: 1, h: 1 })
@@ -505,7 +654,14 @@ export function Plaza({
       'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
       'w', 'a', 's', 'd', 'W', 'A', 'S', 'D',
     ])
-    const talkNow = () => {
+    // Interact with whatever I'm standing next to: a station takes priority when
+    // it's the closest thing, otherwise chat with the nearest person.
+    const interactNow = () => {
+      if (primaryRef.current === 'station') {
+        const s = nearStationRef.current
+        if (s) openStationRefFn.current(s)
+        return
+      }
       const hex = nearHexRef.current
       if (!hex) return
       const target = othersRef.current.find(p => p.hex === hex)
@@ -514,12 +670,21 @@ export function Plaza({
     const down = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return
+      // While a station modal is open, freeze movement; Esc closes it.
+      if (openStationRef.current) {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          setOpenStation(null)
+        }
+        return
+      }
       if (MOVE_KEYS.has(e.key)) {
         e.preventDefault()
         keys.current.add(e.key.toLowerCase())
-      } else if (e.key === 'Enter' || e.key === ' ') {
+      } else if (e.key === ' ') {
+        // Space is the interact key (chat with a person / visit a stall).
         e.preventDefault()
-        talkNow()
+        interactNow()
       }
     }
     const up = (e: KeyboardEvent) => {
@@ -678,6 +843,29 @@ export function Plaza({
       }
       if (bestHex !== nearHexRef.current) setNearHex(bestHex)
 
+      // nearest interactive station (fixed positions)
+      let bestStation: StationKind | null = null
+      let bestSD = NEAR_PX
+      for (const s of STATIONS) {
+        const ddx = (s.x - cur.x) * w
+        const ddy = (s.y - cur.y) * h
+        const d = Math.hypot(ddx, ddy)
+        if (d < bestSD) {
+          bestSD = d
+          bestStation = s.id
+        }
+      }
+      if (bestStation !== nearStationRef.current) setNearStation(bestStation)
+
+      // whichever is closer wins the single ↵ prompt
+      const nextPrimary: 'person' | 'station' | null =
+        bestHex && (bestStation === null || bestD <= bestSD)
+          ? 'person'
+          : bestStation
+            ? 'station'
+            : null
+      if (nextPrimary !== primaryRef.current) setPrimary(nextPrimary)
+
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -714,6 +902,108 @@ export function Plaza({
       {/* decorative village (paths, houses, trees, fountain) — below avatars */}
       <VillageScene />
 
+      {/* interactive stations: fortune teller, info desk, billboard */}
+      {STATIONS.map(s => {
+        const isNear = primary === 'station' && nearStation === s.id
+        return (
+          <div
+            key={s.id}
+            className="absolute z-[5] flex flex-col items-center"
+            style={{
+              left: `${s.x * 100}%`,
+              top: `${s.y * 100}%`,
+              transform: 'translate(-50%, -100%)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => openStationModal(s.id)}
+              className="group flex flex-col items-center"
+              style={{ lineHeight: 0, filter: 'drop-shadow(0 3px 2px rgba(40,28,16,0.28))' }}
+              title={s.label}
+            >
+              {s.id !== 'billboard' && (
+                <span
+                  className="av-prompt font-pixel mb-1 whitespace-nowrap px-1.5 py-0.5 text-[10px] leading-none"
+                  style={{
+                    color: 'var(--wood)',
+                    background: isNear ? 'var(--goldl)' : 'rgba(251,243,218,0.9)',
+                    border: `2px solid ${isNear ? 'var(--wood)' : 'var(--wood2)'}`,
+                    borderRadius: 6,
+                    boxShadow: '0 2px 0 rgba(42,31,24,0.4)',
+                  }}
+                >
+                  {s.label}
+                </span>
+              )}
+              {s.id === 'billboard' ? (
+                // The ad billboard carries the live message on its panel, so
+                // anyone walking past reads it without interacting.
+                <span className="relative block" style={{ lineHeight: 0 }}>
+                  <VillageProp kind={s.id} scale={s.scale} />
+                  {/* header label on the red strip */}
+                  <span
+                    className="font-pixel absolute flex items-center justify-center"
+                    style={{
+                      left: '7.8%',
+                      top: '7.7%',
+                      width: '84.5%',
+                      height: '10.6%',
+                      color: '#fff',
+                      fontSize: 9,
+                      letterSpacing: 0.4,
+                      textShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                    }}
+                  >
+                    📣 NOTICE BOARD
+                  </span>
+                  {/* the live message on the bright panel */}
+                  <span
+                    className="absolute flex items-center justify-center"
+                    style={{
+                      left: '7.8%',
+                      top: '19.2%',
+                      width: '84.5%',
+                      height: '36.5%',
+                      padding: '3px',
+                    }}
+                  >
+                    <span
+                      className="font-sans text-center"
+                      style={{
+                        color: billboard?.message ? '#1d2536' : '#9a8f7e',
+                        fontWeight: 800,
+                        fontStyle: billboard?.message ? 'normal' : 'italic',
+                        fontSize: 12,
+                        lineHeight: 1.12,
+                        wordBreak: 'break-word',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {billboard?.message || 'Post your note here!'}
+                    </span>
+                  </span>
+                </span>
+              ) : (
+                <VillageProp kind={s.id} scale={s.scale} />
+              )}
+            </button>
+            {isNear && (
+              <span
+                className="av-prompt btn3d font-pixel pointer-events-none mt-1 whitespace-nowrap border-2 border-wood px-2.5 py-1 text-[11px] text-wood shadow-[0_2px_0_#2A1F18]"
+                style={{ background: 'linear-gradient(180deg,#F8CE6E,#EBA63A)', borderRadius: 6 }}
+              >
+                ✦ Visit
+                <span className="ml-1 opacity-60">Space</span>
+              </span>
+            )}
+          </div>
+        )
+      })}
+
       {others.map(p => {
         const disp = remoteSpots.get(p.hex)
         const spot = disp ?? p.spot
@@ -738,7 +1028,7 @@ export function Plaza({
       )}
 
       {/* chat prompt below the nearest neighbour — name stays on avatar above */}
-      {nearPerson && nearSpot && (
+      {primary === 'person' && nearPerson && nearSpot && (
         <div
           className="pointer-events-auto absolute z-20 -translate-x-1/2"
           style={{
@@ -756,7 +1046,7 @@ export function Plaza({
             }}
           >
             ✦ Chat
-            <span className="ml-1 opacity-60">↵</span>
+            <span className="ml-1 opacity-60">Space</span>
           </button>
         </div>
       )}
@@ -770,8 +1060,216 @@ export function Plaza({
           borderRadius: 7,
         }}
       >
-        ◀ ▲ ▼ ▶ / WASD to walk · stand by someone & press ↵ to chat
+        ◀ ▲ ▼ ▶ / WASD to walk · press Space to chat or visit a stall
       </div>
+
+      {/* station modal overlay */}
+      {openStation && (
+        <StationModal
+          kind={openStation}
+          event={event}
+          attendeeCount={attendeeCount}
+          billboard={billboard}
+          fortune={fortune}
+          draft={draft}
+          setDraft={setDraft}
+          canPost={!!onSetBillboard}
+          onReroll={() =>
+            setFortune(FORTUNES[Math.floor(Math.random() * FORTUNES.length)])
+          }
+          onPost={() => {
+            const text = draft.trim()
+            if (!text || !onSetBillboard) return
+            onSetBillboard(text)
+            setOpenStation(null)
+          }}
+          onClose={() => setOpenStation(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/** Full-plaza overlay for an interaction station. */
+function StationModal({
+  kind,
+  event,
+  attendeeCount,
+  billboard,
+  fortune,
+  draft,
+  setDraft,
+  canPost,
+  onReroll,
+  onPost,
+  onClose,
+}: {
+  kind: StationKind
+  event?: { name: string; code: string; isOnline: boolean } | null
+  attendeeCount: number
+  billboard?: { message: string; authorName: string } | null
+  fortune: string
+  draft: string
+  setDraft: (v: string) => void
+  canPost: boolean
+  onReroll: () => void
+  onPost: () => void
+  onClose: () => void
+}) {
+  const title =
+    kind === 'fortune'
+      ? '🔮 The Fortune Teller'
+      : kind === 'info-desk'
+        ? 'ℹ️ Info Desk'
+        : '📌 Community Billboard'
+
+  return (
+    <div
+      className="pop absolute inset-0 z-40 flex items-center justify-center p-4"
+      style={{ background: 'rgba(40,28,16,0.55)' }}
+      onClick={onClose}
+    >
+      <div
+        className="wood-panel rise flex w-full max-w-sm flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div
+          className="flex shrink-0 items-center justify-between px-4 py-3"
+          style={{
+            background: 'linear-gradient(180deg,#F8CE6E,#EBA63A)',
+            borderBottom: '4px solid var(--wood)',
+          }}
+        >
+          <span className="font-pixel text-base text-wood">{title}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn3d font-pixel size-7 shrink-0 border-2 border-wood text-wood shadow-[0_2px_0_#2A1F18]"
+            style={{ background: 'var(--parch2)', borderRadius: 6 }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-3 p-5" style={{ background: 'var(--parch)' }}>
+          {kind === 'fortune' && (
+            <>
+              <p
+                className="text-center font-sans text-base font-semibold text-wood"
+                style={{
+                  padding: '16px 14px',
+                  background: 'linear-gradient(180deg,#FFF2CC,#FBE3A0)',
+                  border: '3px solid var(--wood)',
+                  borderRadius: 12,
+                  boxShadow: '0 3px 0 #2A1F18',
+                }}
+              >
+                “{fortune}”
+              </p>
+              <button
+                type="button"
+                onClick={onReroll}
+                className="btn3d font-pixel h-auto w-full border-[3px] border-wood py-2.5 text-base text-wood shadow-[0_4px_0_#2A1F18]"
+                style={{ background: 'var(--goldl)' }}
+              >
+                🔮 Ask again
+              </button>
+            </>
+          )}
+
+          {kind === 'info-desk' && (
+            <div className="flex flex-col gap-2.5">
+              <InfoRow label="Event" value={event?.name ?? '—'} />
+              <InfoRow label="Code" value={event?.code ?? '—'} />
+              <InfoRow
+                label="Type"
+                value={event ? (event.isOnline ? 'Online' : 'In-person') : '—'}
+              />
+              <InfoRow label="Attendees" value={String(attendeeCount)} />
+              <p className="mt-1 font-sans text-sm font-semibold text-wood2">
+                Walk up to anyone and press Space to start a chat. Visit the
+                billboard to leave a note for the room.
+              </p>
+            </div>
+          )}
+
+          {kind === 'billboard' && (
+            <div className="flex flex-col gap-3">
+              <div
+                className="font-sans text-base font-semibold text-wood"
+                style={{
+                  padding: '14px',
+                  background: '#FBF3DA',
+                  border: '3px solid var(--wood)',
+                  borderRadius: 12,
+                  boxShadow: '0 3px 0 #2A1F18',
+                  minHeight: 64,
+                }}
+              >
+                {billboard?.message ? (
+                  <>
+                    <span>{billboard.message}</span>
+                    <span className="mt-2 block font-pixel text-xs text-wood2">
+                      — {billboard.authorName}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-wood2">
+                    The board is empty. Be the first to post!
+                  </span>
+                )}
+              </div>
+              {canPost ? (
+                <>
+                  <textarea
+                    value={draft}
+                    onChange={e => setDraft(e.target.value.slice(0, 140))}
+                    placeholder="Leave a note for the whole room…"
+                    rows={3}
+                    className="resize-none font-sans text-base font-semibold text-wood focus-visible:outline-none"
+                    style={{
+                      padding: '10px 12px',
+                      background: '#fffaf0',
+                      border: '3px solid var(--wood)',
+                      borderRadius: 10,
+                    }}
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="font-pixel text-xs text-wood2">
+                      {draft.length}/140
+                    </span>
+                    <button
+                      type="button"
+                      onClick={onPost}
+                      disabled={!draft.trim()}
+                      className="btn3d font-pixel h-auto border-[3px] border-wood px-5 py-2 text-base text-wood shadow-[0_4px_0_#2A1F18]"
+                      style={{
+                        background: draft.trim() ? 'var(--gold)' : '#d8c290',
+                        opacity: draft.trim() ? 1 : 0.7,
+                      }}
+                    >
+                      📌 Post
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="font-sans text-sm font-semibold text-wood2">
+                  Join the event to post to the billboard.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="font-pixel text-sm text-wood2">{label}</span>
+      <span className="font-pixel min-w-0 truncate text-sm text-wood">{value}</span>
     </div>
   )
 }
