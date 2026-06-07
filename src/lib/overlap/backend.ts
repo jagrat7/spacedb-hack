@@ -67,6 +67,19 @@ export type Other = {
   match?: Match
 }
 
+export type Facing = 'left' | 'right'
+
+export type Spot = { x: number; y: number; facing: Facing }
+
+export type PlazaPerson = {
+  hex: string
+  profile?: Profile
+  spot: Spot
+  isMe: boolean
+  pairKey?: string
+  match?: Match
+}
+
 // ── Subscriptions ────────────────────────────────────────────────────────────
 
 function useOverlapSubscriptions() {
@@ -85,6 +98,33 @@ function useOverlapSubscriptions() {
         tables.agentMessage,
       ])
   }, [isActive, getConnection])
+}
+
+function usePresenceSubscription() {
+  const { isActive, getConnection } = useSpacetimeDB()
+  useEffect(() => {
+    if (!isActive) return
+    const conn = getConnection() as DbConnection | null
+    if (!conn) return
+    try {
+      conn.subscriptionBuilder().subscribe([tables.presence])
+    } catch {
+      // table not published yet — plaza degrades to spawn-only positions
+    }
+  }, [isActive, getConnection])
+}
+
+export function spawnSpot(hex: string): Spot {
+  const h = normHex(hex)
+  let a = 0
+  let b = 0
+  for (let i = 0; i < h.length; i++) {
+    a = (a * 31 + h.charCodeAt(i)) >>> 0
+    b = (b * 17 + h.charCodeAt(h.length - 1 - i)) >>> 0
+  }
+  const x = 0.12 + (a % 1000) / 1000 * 0.76
+  const y = 0.18 + (b % 1000) / 1000 * 0.64
+  return { x, y, facing: a % 2 === 0 ? 'right' : 'left' }
 }
 
 // ── Home (onboarding + lobby) ────────────────────────────────────────────────
@@ -135,14 +175,18 @@ export function useOverlapHome() {
 export function useEventRoom(eventIdStr: string) {
   const { identity } = useSpacetimeDB()
   useOverlapSubscriptions()
+  usePresenceSubscription()
 
   const [profiles] = useSpacetimeDBQuery(tables.profile)
   const [events] = useSpacetimeDBQuery(tables.event)
   const [attendees] = useSpacetimeDBQuery(tables.attendee)
   const [matches] = useSpacetimeDBQuery(tables.match)
   const [agentMessages] = useSpacetimeDBQuery(tables.agentMessage)
+  const [presences] = useSpacetimeDBQuery(tables.presence)
 
   const sendChatMessage = useReducer(reducers.sendChatMessage)
+  const openPlazaChatReducer = useReducer(reducers.openPlazaChat)
+  const updatePosition = useReducer(reducers.updatePosition)
   const triggered = useRef(new Set<string>())
 
   const eventId = useMemo<bigint | null>(() => {
@@ -187,6 +231,49 @@ export function useEventRoom(eventIdStr: string) {
     }
     return result.sort((x, y) => (y.match?.score ?? -1) - (x.match?.score ?? -1))
   }, [attendees, profiles, matchByKey, eventId, myHex])
+
+  const spotByHex = useMemo(() => {
+    const m = new Map<string, Spot>()
+    if (eventId === null) return m
+    for (const p of presences) {
+      if (p.eventId !== eventId) continue
+      m.set(normHex(p.identity.toHexString()), {
+        x: p.x,
+        y: p.y,
+        facing: p.facing === 'left' ? 'left' : 'right',
+      })
+    }
+    return m
+  }, [presences, eventId])
+
+  const people = useMemo<PlazaPerson[]>(() => {
+    if (eventId === null || !myHex) return []
+    const list: PlazaPerson[] = []
+    if (myProfile) {
+      list.push({
+        hex: normHex(myHex),
+        profile: myProfile,
+        spot: spotByHex.get(normHex(myHex)) ?? spawnSpot(myHex),
+        isMe: true,
+      })
+    }
+    for (const o of others) {
+      list.push({
+        hex: normHex(o.otherHex),
+        profile: o.profile,
+        spot: spotByHex.get(normHex(o.otherHex)) ?? spawnSpot(o.otherHex),
+        isMe: false,
+        pairKey: o.pairKey,
+        match: o.match,
+      })
+    }
+    return list
+  }, [others, myProfile, myHex, spotByHex, eventId])
+
+  const move = (x: number, y: number, facing: Facing) => {
+    if (eventId === null) return
+    updatePosition({ eventId, x, y, facing })
+  }
 
   // Matches are no longer auto-run on entry (that burned API tokens against
   // every attendee on every visit). A match only runs when the user taps
@@ -246,6 +333,16 @@ export function useEventRoom(eventIdStr: string) {
     }, 1500)
   }
 
+  const onSendDirectChat = (pairKey: string, text: string) => {
+    if (!text.trim()) return
+    sendChatMessage({ pairKey, text: text.trim() })
+  }
+
+  const openPlazaChat = (other: Other) => {
+    if (eventId === null) return
+    openPlazaChatReducer({ eventId, otherIdentity: other.profile.identity })
+  }
+
   const reRun = (o: Other) => {
     triggered.current.add(o.pairKey)
     runFor(o)
@@ -262,8 +359,12 @@ export function useEventRoom(eventIdStr: string) {
     others,
     messagesByPair,
     onSendChat,
+    onSendDirectChat,
+    openPlazaChat,
     begin,
     reRun,
     mySideFor,
+    people,
+    move,
   }
 }

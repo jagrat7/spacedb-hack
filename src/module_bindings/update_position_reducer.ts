@@ -10,11 +10,9 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-export default __t.row({
-  id: __t.u64().primaryKey(),
-  code: __t.string(),
-  name: __t.string(),
-  imageUrl: __t.string().name("image_url"),
-  isOnline: __t.bool().name("is_online"),
-  createdAt: __t.timestamp().name("created_at"),
-});
+export default {
+  eventId: __t.u64(),
+  x: __t.f32(),
+  y: __t.f32(),
+  facing: __t.string(),
+};

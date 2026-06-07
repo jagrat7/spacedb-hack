@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Portrait, initialsOf } from '@/components/cozy'
-import { isHumanSpeaker, sideOf } from '@/lib/overlap/backend'
+import { avatarUrl, isHumanSpeaker, sideOf } from '@/lib/overlap/backend'
 import type { AgentMessage, Profile } from '@/module_bindings/types'
 
 export function ChatPanel({
@@ -12,6 +12,7 @@ export function ChatPanel({
   streaming,
   transcript,
   onSend,
+  humanOnly = false,
 }: {
   other: Profile
   me: Profile
@@ -19,8 +20,9 @@ export function ChatPanel({
   streaming: boolean
   transcript: AgentMessage[]
   onSend: (text: string) => void
+  humanOnly?: boolean
 }) {
-  const [driving, setDriving] = useState(false)
+  const [driving, setDriving] = useState(humanOnly)
   const [draft, setDraft] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -42,6 +44,8 @@ export function ChatPanel({
   const nameOf = (speaker: string) =>
     sideOf(speaker) === mySide ? me.name : other.name
   const initOf = (speaker: string) => initialsOf(nameOf(speaker))
+  const avatarOf = (speaker: string) =>
+    avatarUrl(sideOf(speaker) === mySide ? me.avatarSeed : other.avatarSeed)
 
   const onTakeOver = () => {
     setDriving(true)
@@ -56,11 +60,20 @@ export function ChatPanel({
     onSend(text)
   }
 
-  const banner = connected
-    ? { bg: 'linear-gradient(180deg,#F2B946,#E597B0)', text: "You're both here!" }
-    : driving
-      ? { bg: 'linear-gradient(180deg,#F8CE6E,#EBA63A)', text: "You've got the controls" }
-      : { bg: 'linear-gradient(180deg,#9bd6a3,#82C58C)', text: 'The agents are chatting…' }
+  const visibleTranscript = useMemo(
+    () => (humanOnly ? transcript.filter(m => isHumanSpeaker(m.speaker)) : transcript),
+    [transcript, humanOnly]
+  )
+
+  const banner = humanOnly
+    ? connected
+      ? { bg: 'linear-gradient(180deg,#F2B946,#E597B0)', text: "You're both here!" }
+      : { bg: 'linear-gradient(180deg,#F8CE6E,#EBA63A)', text: `Chat with ${other.name}` }
+    : connected
+      ? { bg: 'linear-gradient(180deg,#F2B946,#E597B0)', text: "You're both here!" }
+      : driving
+        ? { bg: 'linear-gradient(180deg,#F8CE6E,#EBA63A)', text: "You've got the controls" }
+        : { bg: 'linear-gradient(180deg,#9bd6a3,#82C58C)', text: 'The agents are chatting…' }
 
   return (
     <div className="wood-panel rise flex h-full flex-col overflow-hidden">
@@ -81,7 +94,9 @@ export function ChatPanel({
           />
           <span className="font-pixel text-[17px] text-wood">{banner.text}</span>
         </div>
-        <span className="font-pixel text-xs text-wood/70">AGENT ✦ AGENT</span>
+        <span className="font-pixel text-xs text-wood/70">
+          {humanOnly ? `${me.name} ✦ ${other.name}` : 'AGENT ✦ AGENT'}
+        </span>
       </div>
 
       <div
@@ -92,7 +107,7 @@ export function ChatPanel({
             'repeating-linear-gradient(180deg,#fdf6e0,#fdf6e0 22px,#f8eecb 22px,#f8eecb 44px)',
         }}
       >
-        {transcript.map(m => {
+        {visibleTranscript.map(m => {
           const right = sideOf(m.speaker) === mySide
           const human = isHumanSpeaker(m.speaker)
           return (
@@ -104,7 +119,12 @@ export function ChatPanel({
                 className={`flex items-start gap-2.5 ${right ? 'flex-row-reverse' : ''}`}
                 style={{ maxWidth: '84%' }}
               >
-                <Portrait initials={initOf(m.speaker)} size={38} live={human} />
+                <Portrait
+                  initials={initOf(m.speaker)}
+                  src={avatarOf(m.speaker)}
+                  size={38}
+                  live={human}
+                />
                 <div className={right ? 'flex flex-col items-end' : 'flex flex-col'}>
                   <div
                     className={`mb-1 flex items-center gap-1.5 ${right ? 'flex-row-reverse' : ''}`}
@@ -115,19 +135,21 @@ export function ChatPanel({
                     >
                       {nameOf(m.speaker)}
                     </span>
-                    <span
-                      className="font-pixel inline-flex items-center gap-1"
-                      style={{
-                        fontSize: 10,
-                        color: human ? 'var(--wood)' : 'var(--wood2)',
-                        background: human ? 'var(--gold)' : '#e7d5a8',
-                        border: `2px solid ${human ? 'var(--wood)' : 'var(--wood2)'}`,
-                        borderRadius: 5,
-                        padding: '0 5px',
-                      }}
-                    >
-                      {human ? '✦ HUMAN' : '⚙ AGENT'}
-                    </span>
+                    {!humanOnly && (
+                      <span
+                        className="font-pixel inline-flex items-center gap-1"
+                        style={{
+                          fontSize: 10,
+                          color: human ? 'var(--wood)' : 'var(--wood2)',
+                          background: human ? 'var(--gold)' : '#e7d5a8',
+                          border: `2px solid ${human ? 'var(--wood)' : 'var(--wood2)'}`,
+                          borderRadius: 5,
+                          padding: '0 5px',
+                        }}
+                      >
+                        {human ? '✦ HUMAN' : '⚙ AGENT'}
+                      </span>
+                    )}
                   </div>
                   <div
                     className="break-words whitespace-pre-wrap"
@@ -155,10 +177,14 @@ export function ChatPanel({
           )
         })}
 
-        {streaming && (
+        {!humanOnly && streaming && (
           <div className="flex justify-start">
             <div className="flex items-start gap-2.5">
-              <Portrait initials={initialsOf(other.name)} size={38} />
+              <Portrait
+                initials={initialsOf(other.name)}
+                src={avatarUrl(other.avatarSeed)}
+                size={38}
+              />
               <div className="flex flex-col">
                 <div className="mb-1 flex items-center gap-1.5">
                   <span
@@ -215,7 +241,7 @@ export function ChatPanel({
         className="shrink-0 px-5 py-4"
         style={{ borderTop: '4px solid var(--wood)', background: 'var(--parch)' }}
       >
-        {!driving ? (
+        {!humanOnly && !driving ? (
           <Button
             onClick={onTakeOver}
             className="btn3d font-pixel h-auto w-full border-4 border-wood py-3 text-lg text-wood shadow-[0_5px_0_#2A1F18]"
@@ -226,7 +252,12 @@ export function ChatPanel({
         ) : (
           <form onSubmit={send} className="slide-up flex flex-col gap-3">
             <div className="flex items-end gap-2.5">
-              <Portrait initials={initialsOf(me.name)} size={40} live />
+              <Portrait
+                initials={initialsOf(me.name)}
+                src={avatarUrl(me.avatarSeed)}
+                size={40}
+                live
+              />
               <div
                 className="flex flex-1 items-center"
                 style={{
@@ -276,27 +307,29 @@ export function ChatPanel({
                 </Button>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="font-pixel text-xs text-wood2">
-                {connected
-                  ? '★ Both of you are live — agents stepped back'
-                  : 'Your agent paused · you’re speaking live'}
-              </span>
-              <button
-                type="button"
-                onClick={() => setDriving(false)}
-                className="btn3d font-pixel text-xs text-wood"
-                style={{
-                  background: '#e7d5a8',
-                  border: '3px solid var(--wood)',
-                  borderRadius: 8,
-                  padding: '5px 10px',
-                  boxShadow: '0 3px 0 #2A1F18',
-                }}
-              >
-                ◀ HAND BACK
-              </button>
-            </div>
+            {!humanOnly && (
+              <div className="flex items-center justify-between">
+                <span className="font-pixel text-xs text-wood2">
+                  {connected
+                    ? '★ Both of you are live — agents stepped back'
+                    : 'Your agent paused · you’re speaking live'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDriving(false)}
+                  className="btn3d font-pixel text-xs text-wood"
+                  style={{
+                    background: '#e7d5a8',
+                    border: '3px solid var(--wood)',
+                    borderRadius: 8,
+                    padding: '5px 10px',
+                    boxShadow: '0 3px 0 #2A1F18',
+                  }}
+                >
+                  ◀ HAND BACK
+                </button>
+              </div>
+            )}
           </form>
         )}
       </div>

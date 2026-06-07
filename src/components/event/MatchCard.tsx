@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Flower, Portrait, StatBar, initialsOf } from '@/components/cozy'
-import { parseList } from '@/lib/overlap/backend'
+import { avatarUrl, parseList } from '@/lib/overlap/backend'
 import type { Match, Profile } from '@/module_bindings/types'
 
 export function MatchCard({
@@ -31,10 +31,15 @@ export function MatchCard({
       </div>
       <div className="p-4">
         <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Portrait initials={initialsOf(other.name)} size={42} live={complete} />
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <Portrait
+              initials={initialsOf(other.name)}
+              src={avatarUrl(other.avatarSeed)}
+              size={42}
+              live={complete}
+            />
             <div className="min-w-0">
-              <div className="font-pixel text-base text-wood">{other.name}</div>
+              <div className="truncate font-pixel text-base text-wood">{other.name}</div>
               <div className="truncate font-sans text-xs font-semibold text-wood2">
                 {other.goals}
               </div>

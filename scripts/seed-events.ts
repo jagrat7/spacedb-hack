@@ -35,8 +35,15 @@ type Profile = {
 type Event = {
   code: string;
   name: string;
+  image: string; // cover photo shown on lobby cards + event header
+  isOnline?: boolean; // online (remote) event vs in-person; defaults to false
   attendees: Profile[];
 };
+
+// Stable stock photos (Lorem Picsum, deterministic per id) so seeded events
+// always render the same cover without needing an API key.
+const stockImage = (id: string) =>
+  `https://picsum.photos/seed/overlap-${id}/800/400`;
 
 // Each event has its own cast, with deliberate overlap inside the event so
 // matches are interesting (some share a domain, some are complementary).
@@ -44,6 +51,8 @@ const EVENTS: Event[] = [
   {
     code: 'AIHACK',
     name: 'AI Builders Hack Night',
+    image: stockImage('aihack'),
+    isOnline: true,
     attendees: [
       {
         name: 'Hiro Tanaka',
@@ -80,6 +89,7 @@ const EVENTS: Event[] = [
   {
     code: 'GAMEDEV',
     name: 'Realtime Game Dev Meetup',
+    image: stockImage('gamedev'),
     attendees: [
       {
         name: 'Ada Okafor',
@@ -114,6 +124,7 @@ const EVENTS: Event[] = [
   {
     code: 'SINGLES',
     name: 'Singles Mixer',
+    image: stockImage('singles'),
     attendees: [
       {
         name: 'Jamie Cole',
@@ -162,6 +173,8 @@ const EVENTS: Event[] = [
   {
     code: 'FOUNDERS',
     name: 'Founders & Funders Mixer',
+    image: stockImage('founders'),
+    isOnline: true,
     attendees: [
       {
         name: 'Theo Brandt',
@@ -249,7 +262,12 @@ async function main() {
   }> = [];
 
   for (const ev of toSeed) {
-    await callReducerAs(organizer.token, 'create_event', [ev.code, ev.name]);
+    await callReducerAs(organizer.token, 'create_event', [
+      ev.code,
+      ev.name,
+      ev.image,
+      ev.isOnline ?? false,
+    ]);
     console.log(`Event ${ev.code} — ${ev.name}`);
 
     const seeded: Array<{ name: string; identity: string; token: string }> = [];

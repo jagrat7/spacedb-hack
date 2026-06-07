@@ -1,4 +1,5 @@
 import { Leaf, LeafSpray, Portrait, Star, initialsOf } from '@/components/cozy'
+import { avatarUrl } from '@/lib/overlap/backend'
 
 const cozyBtnBase =
   'btn3d font-pixel shrink-0 border-[3px] border-wood text-wood shadow-[0_3px_0_#2A1F18]'
@@ -36,17 +37,24 @@ export function CozyBtn({
 export function ProfileBar({
   name,
   role,
+  avatarSeed,
   onEdit,
   onSignOut,
 }: {
   name: string
   role: string
+  avatarSeed?: string
   onEdit: () => void
   onSignOut: () => void
 }) {
   return (
     <div className="wood-panel flex w-full items-center gap-2.5 px-3 py-2 sm:w-auto sm:gap-3 sm:px-4 sm:py-2.5">
-      <Portrait initials={initialsOf(name)} size={36} live />
+      <Portrait
+        initials={initialsOf(name)}
+        src={avatarSeed ? avatarUrl(avatarSeed) : undefined}
+        size={36}
+        live
+      />
       <div className="min-w-0 flex-1 leading-tight sm:max-w-[12rem] sm:flex-none">
         <div className="truncate font-pixel text-sm text-wood">{name}</div>
         <div className="truncate font-sans text-[11px] font-bold text-wood2">

@@ -8,6 +8,8 @@ const event = table(
     id: t.u64().primaryKey().autoInc(),
     code: t.string().unique().index('btree'),
     name: t.string(),
+    imageUrl: t.string(), // cover image shown on lobby cards + event header
+    isOnline: t.bool(), // online (remote) event vs in-person
     createdAt: t.timestamp(),
   }
 );
@@ -90,7 +92,34 @@ const agentMessage = table(
   }
 );
 
-const spacetimedb = schema({ event, attendee, profile, match, agentMessage });
+// Live plaza position for an attendee. Keyed by identity (you occupy one plaza
+// at a time); eventId scopes which room you're standing in. x/y are normalized
+// 0..1 so the client maps them onto whatever the plaza is sized to. facing is
+// 'left' | 'right' for sprite flip. Last-write-wins; clients throttle writes.
+const presence = table(
+  {
+    name: 'presence',
+    public: true,
+    indexes: [{ accessor: 'by_event', algorithm: 'btree', columns: ['eventId'] }],
+  },
+  {
+    identity: t.identity().primaryKey(),
+    eventId: t.u64(),
+    x: t.f32(),
+    y: t.f32(),
+    facing: t.string(),
+    updatedAt: t.timestamp(),
+  }
+);
+
+const spacetimedb = schema({
+  event,
+  attendee,
+  profile,
+  match,
+  agentMessage,
+  presence,
+});
 export default spacetimedb;
 
 // ── Client-callable reducers ────────────────────────────────────────────────
@@ -126,11 +155,35 @@ export const upsertProfile = spacetimedb.reducer(
   }
 );
 
+// Move (or spawn) the caller's avatar in the plaza. Clamps to the [0,1] box so
+// a buggy client can't fling an avatar off-screen. Upsert by identity.
+export const updatePosition = spacetimedb.reducer(
+  { eventId: t.u64(), x: t.f32(), y: t.f32(), facing: t.string() },
+  (ctx, { eventId, x, y, facing }) => {
+    const clamp = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
+    const dir = facing === 'left' ? 'left' : 'right';
+    const row = {
+      identity: ctx.sender,
+      eventId,
+      x: clamp(x),
+      y: clamp(y),
+      facing: dir,
+      updatedAt: ctx.timestamp,
+    };
+    const existing = ctx.db.presence.identity.find(ctx.sender);
+    if (existing) {
+      ctx.db.presence.identity.update(row);
+    } else {
+      ctx.db.presence.insert(row);
+    }
+  }
+);
+
 // Create an event if its code is free. Idempotent: calling with an existing
 // code is a no-op, so it's safe to run from seed scripts repeatedly.
 export const createEvent = spacetimedb.reducer(
-  { code: t.string(), name: t.string() },
-  (ctx, { code, name }) => {
+  { code: t.string(), name: t.string(), imageUrl: t.string(), isOnline: t.bool() },
+  (ctx, { code, name, imageUrl, isOnline }) => {
     const normalized = code.trim().toUpperCase();
     if (!normalized) throw new SenderError('Event code must not be empty');
 
@@ -143,6 +196,8 @@ export const createEvent = spacetimedb.reducer(
       id: 0n,
       code: normalized,
       name: trimmedName,
+      imageUrl: imageUrl.trim(),
+      isOnline,
       createdAt: ctx.timestamp,
     });
   }
@@ -167,6 +222,57 @@ export const joinEvent = spacetimedb.reducer(
       eventId: ev.id,
       identity: ctx.sender,
       joinedAt: ctx.timestamp,
+    });
+  }
+);
+
+// Open a direct human-to-human chat in the plaza (no agents). Idempotent: creates
+// a lightweight match row with status 'live' so sendChatMessage can append turns.
+export const openPlazaChat = spacetimedb.reducer(
+  { eventId: t.u64(), otherIdentity: t.identity() },
+  (ctx, { eventId, otherIdentity }) => {
+    if (otherIdentity.equals(ctx.sender)) {
+      throw new SenderError('Cannot chat with yourself');
+    }
+
+    const norm = (hex: string) => hex.toLowerCase().replace(/^0x/, '');
+    const [first, second] = [
+      norm(ctx.sender.toHexString()),
+      norm(otherIdentity.toHexString()),
+    ].sort();
+    const pairKey = `${Number(eventId)}:${first}:${second}`;
+
+    const myAttendee = [
+      ...ctx.db.attendee.by_event_identity.filter([eventId, ctx.sender]),
+    ];
+    const theirAttendee = [
+      ...ctx.db.attendee.by_event_identity.filter([eventId, otherIdentity]),
+    ];
+    if (myAttendee.length === 0 || theirAttendee.length === 0) {
+      throw new SenderError('Both users must be in this event');
+    }
+
+    if (ctx.db.match.pairKey.find(pairKey)) return;
+
+    const [aIdentity, bIdentity] =
+      norm(ctx.sender.toHexString()) <= norm(otherIdentity.toHexString())
+        ? [ctx.sender, otherIdentity]
+        : [otherIdentity, ctx.sender];
+
+    ctx.db.match.insert({
+      pairKey,
+      eventId,
+      aIdentity,
+      bIdentity,
+      status: 'live',
+      score: 0,
+      metricShared: 0,
+      metricComplementary: 0,
+      metricGoals: 0,
+      summary: '',
+      commonGround: '[]',
+      icebreakers: '[]',
+      updatedAt: ctx.timestamp,
     });
   }
 );
@@ -324,6 +430,8 @@ export const init = spacetimedb.init(ctx => {
       id: 0n,
       code: 'DEMO',
       name: 'Demo Event',
+      imageUrl: 'https://picsum.photos/seed/DEMO/800/400',
+      isOnline: false,
       createdAt: ctx.timestamp,
     });
   }

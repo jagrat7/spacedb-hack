@@ -11,10 +11,10 @@ import {
 } from "spacetimedb";
 
 export default __t.row({
-  id: __t.u64().primaryKey(),
-  code: __t.string(),
-  name: __t.string(),
-  imageUrl: __t.string().name("image_url"),
-  isOnline: __t.bool().name("is_online"),
-  createdAt: __t.timestamp().name("created_at"),
+  identity: __t.identity().primaryKey(),
+  eventId: __t.u64().name("event_id"),
+  x: __t.f32(),
+  y: __t.f32(),
+  facing: __t.string(),
+  updatedAt: __t.timestamp().name("updated_at"),
 });

@@ -5,7 +5,91 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Leaf, LeafSpray, Sparkles } from '@/components/cozy'
 import { useOverlapHome } from '@/lib/overlap/backend'
+import type { Event as OverlapEvent } from '@/module_bindings/types'
 import { CozyField, ProfileBar, Signboard, inputClass } from './shared'
+
+/** Pill marking an event as remote/online. */
+function OnlineTag() {
+  return (
+    <span
+      className="font-pixel inline-flex shrink-0 items-center gap-1 text-[10px]"
+      style={{
+        color: 'var(--wood)',
+        background: 'var(--sage)',
+        border: '2px solid var(--wood)',
+        borderRadius: 5,
+        padding: '0 6px',
+      }}
+    >
+      <span
+        className="blink inline-block"
+        style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--saged)' }}
+      />
+      ONLINE
+    </span>
+  )
+}
+
+/** A single quest-board event card with an optional cover image. */
+function EventCard({
+  ev,
+  badgeBg,
+  footer,
+  onClick,
+}: {
+  ev: OverlapEvent
+  badgeBg: string
+  footer: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="btn3d quest-card pinned relative overflow-hidden p-0 text-left"
+    >
+      {ev.imageUrl && (
+        <div
+          className="relative h-24 w-full overflow-hidden"
+          style={{ borderBottom: '3px solid var(--wood)' }}
+        >
+          <img
+            src={ev.imageUrl}
+            alt={ev.name}
+            loading="lazy"
+            className="h-full w-full object-cover"
+            draggable={false}
+          />
+          {ev.isOnline && (
+            <div className="absolute left-2 top-2 z-10">
+              <OnlineTag />
+            </div>
+          )}
+        </div>
+      )}
+      <div className="p-4">
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <span className="font-pixel text-base text-wood">{ev.name}</span>
+          <span
+            className="font-pixel shrink-0 text-[10px]"
+            style={{
+              color: 'var(--wood)',
+              background: badgeBg,
+              border: '2px solid var(--wood)',
+              borderRadius: 5,
+              padding: '0 6px',
+            }}
+          >
+            {ev.code}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-sans text-xs font-semibold text-wood2">{footer}</span>
+          {ev.isOnline && !ev.imageUrl && <OnlineTag />}
+        </div>
+      </div>
+    </button>
+  )
+}
 
 /* ------------------------------------------------------------------ *
  * Event lobby — join by code + my events                             *
@@ -52,6 +136,7 @@ export function Lobby({ onEdit }: { onEdit: () => void }) {
         <ProfileBar
           name={myProfile?.name ?? ''}
           role={myProfile?.goals ?? ''}
+          avatarSeed={myProfile?.avatarSeed}
           onEdit={onEdit}
           onSignOut={() => auth.signoutRedirect()}
         />
@@ -114,37 +199,18 @@ export function Lobby({ onEdit }: { onEdit: () => void }) {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {myEvents.map(ev => (
-              <button
+              <EventCard
                 key={String(ev.id)}
+                ev={ev}
+                badgeBg="var(--goldl)"
+                footer="Tap to enter the room"
                 onClick={() =>
                   navigate({
                     to: '/event/$eventId',
                     params: { eventId: String(ev.id) },
                   })
                 }
-                className="btn3d quest-card pinned relative p-4 text-left"
-              >
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="font-pixel text-base text-wood">
-                    {ev.name}
-                  </span>
-                  <span
-                    className="font-pixel text-[10px]"
-                    style={{
-                      color: 'var(--wood)',
-                      background: 'var(--goldl)',
-                      border: '2px solid var(--wood)',
-                      borderRadius: 5,
-                      padding: '0 6px',
-                    }}
-                  >
-                    {ev.code}
-                  </span>
-                </div>
-                <div className="font-sans text-xs font-semibold text-wood2">
-                  Tap to enter the room
-                </div>
-              </button>
+              />
             ))}
           </div>
         </section>
@@ -161,32 +227,13 @@ export function Lobby({ onEdit }: { onEdit: () => void }) {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {otherEvents.map(ev => (
-              <button
+              <EventCard
                 key={String(ev.id)}
+                ev={ev}
+                badgeBg="var(--parch2)"
+                footer="Tap to join & enter"
                 onClick={() => enterEvent(ev)}
-                className="btn3d quest-card pinned relative p-4 text-left"
-              >
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="font-pixel text-base text-wood">
-                    {ev.name}
-                  </span>
-                  <span
-                    className="font-pixel text-[10px]"
-                    style={{
-                      color: 'var(--wood)',
-                      background: 'var(--parch2)',
-                      border: '2px solid var(--wood)',
-                      borderRadius: 5,
-                      padding: '0 6px',
-                    }}
-                  >
-                    {ev.code}
-                  </span>
-                </div>
-                <div className="font-sans text-xs font-semibold text-wood2">
-                  Tap to join &amp; enter
-                </div>
-              </button>
+              />
             ))}
           </div>
         </section>

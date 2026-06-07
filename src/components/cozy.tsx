@@ -54,19 +54,24 @@ export function Star({
   )
 }
 
-/** Chunky framed initials avatar. */
+/**
+ * Chunky framed avatar. Renders a generated portrait image when `src` is set,
+ * otherwise falls back to the initials.
+ */
 export function Portrait({
   initials,
+  src,
   size = 40,
   live = false,
 }: {
   initials: string
+  src?: string
   size?: number
   live?: boolean
 }) {
   return (
     <div
-      className="font-pixel relative grid shrink-0 place-items-center select-none"
+      className="font-pixel relative grid shrink-0 place-items-center overflow-hidden select-none"
       style={{
         width: size,
         height: size,
@@ -83,7 +88,17 @@ export function Portrait({
           : 'inset 0 0 0 2px #fff8, 0 3px 0 #2A1F18',
       }}
     >
-      {initials}
+      {src ? (
+        <img
+          src={src}
+          alt={initials}
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
+          draggable={false}
+        />
+      ) : (
+        initials
+      )}
     </div>
   )
 }

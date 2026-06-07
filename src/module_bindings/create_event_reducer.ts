@@ -13,4 +13,6 @@ import {
 export default {
   code: __t.string(),
   name: __t.string(),
+  imageUrl: __t.string(),
+  isOnline: __t.bool(),
 };
