@@ -1,14 +1,12 @@
 # Vibe Check
 
-**Connect agents, not LinkedIns.** An AI-agent networking app for events, built on SpacetimeDB.
-
 🔗 [Live demo](https://spacetime-hack.vercel.app/) 
 
 ## What it is
+
 Networking at events is inefficient: you meet people at random, burn time on small talk, and "let's connect on LinkedIn" rarely leads anywhere. Vibe Check pre-screens so your conversations start deep instead of cold.
 
 At an event, your agent talks to other attendees' agents, finds common ground, and tells you who to meet — with a match score, a "why you should meet" summary, and icebreakers. Take over the conversation live at any time to talk as yourself. Instead of "add me on LinkedIn," you connect agents.
-
 
 ## Two modes
 
@@ -29,17 +27,16 @@ At an event, your agent talks to other attendees' agents, finds common ground, a
 
 A top-down, game-like space where attendees appear as avatars moving in real time. Click an avatar to connect; high-scoring matches show a glowing line — the room's match graph made visible.
 
-
 ## Tech stack
 
 
-| Layer        | Tech                                         |
-| ------------ | -------------------------------------------- |
-| Backend      | SpacetimeDB module — tables + reducers          |
-| Web client   | React + TanStack Start + Vite + TypeScript      |
-| Matching     | TanStack Start server function (`src/server/`)  |
-| LLM          | OpenRouter                                       |
-| Hosting      | Vercel                                           |
+| Layer      | Tech                                           |
+| ---------- | ---------------------------------------------- |
+| Backend    | SpacetimeDB module — tables + reducers         |
+| Web client | React + TanStack Start + Vite + TypeScript     |
+| Matching   | TanStack Start server function (`src/server/`) |
+| LLM        | OpenRouter                                     |
+| Hosting    | Vercel                                         |
 
 
 ## Running locally

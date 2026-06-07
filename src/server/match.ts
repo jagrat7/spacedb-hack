@@ -291,10 +291,22 @@ export const runAgentReply = createServerFn({ method: 'POST' })
 
       // speaker is 'a'/'b' (agent) or 'a_human'/'b_human'; the leading char is
       // the side. Messages on the responder's side are the assistant's own.
-      const messages: ModelMessage[] = history.map(h => ({
-        role: h.speaker.startsWith(responderSide) ? 'assistant' : 'user',
-        content: h.text,
-      }));
+      // With no history yet, this is an opening greeting (the agent speaks
+      // first), so seed it the same way runMatch opens a fresh conversation.
+      const messages: ModelMessage[] =
+        history.length === 0
+          ? [
+              {
+                role: 'user',
+                content:
+                  'You are meeting another attendee for the first time. Open ' +
+                  'with a friendly, specific hello that hints at what you do.',
+              },
+            ]
+          : history.map(h => ({
+              role: h.speaker.startsWith(responderSide) ? 'assistant' : 'user',
+              content: h.text,
+            }));
 
       const result = streamText({
         model,

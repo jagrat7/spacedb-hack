@@ -508,6 +508,26 @@ export function useEventRoom(eventIdStr: string) {
     openPlazaChatReducer({ eventId, otherIdentity: other.profile.identity })
   }
 
+  // Auto-start a plaza chat with a seeded NPC: create the lightweight match row
+  // (so the human can reply) and have the NPC's agent open with a greeting, so
+  // the conversation is already going the moment the visitor arrives. No-op if
+  // the pair already has a transcript (don't re-greet an existing chat).
+  const autoGreetPlaza = (other: Other) => {
+    if (eventId === null || !myHex) return
+    openPlazaChatReducer({ eventId, otherIdentity: other.profile.identity })
+    if ((messagesRef.current.get(other.pairKey) ?? []).length > 0) return
+    // The NPC sits on the opposite side from me (canonical: smaller hex is 'a').
+    const npcSide: 'a' | 'b' =
+      normHex(myHex) <= normHex(other.otherHex) ? 'b' : 'a'
+    runAgentReply({
+      data: {
+        pairKey: other.pairKey,
+        responderSide: npcSide,
+        responderProfile: toLite(other.profile),
+      },
+    }).catch(() => {})
+  }
+
   const reRun = (o: Other) => {
     triggered.current.add(o.pairKey)
     runFor(o)
@@ -526,6 +546,7 @@ export function useEventRoom(eventIdStr: string) {
     onSendChat,
     onSendDirectChat,
     openPlazaChat,
+    autoGreetPlaza,
     begin,
     reRun,
     mySideFor,

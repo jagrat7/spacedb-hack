@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Leaf, LeafSpray, Sparkles, Star } from '@/components/cozy'
 import {
@@ -37,6 +37,7 @@ function EventRoom() {
     billboard,
     setBillboard,
     openPlazaChat,
+    autoGreetPlaza,
     onSendDirectChat,
     ringByHex,
     incomingRings,
@@ -58,6 +59,20 @@ function EventRoom() {
   useEffect(() => {
     if (!selectedKey && others.length) setSelectedKey(others[0].pairKey)
   }, [others, selectedKey])
+
+  // Auto-start a chat with an agent the moment you join the online plaza: pick
+  // the top seeded NPC, open its chat, and let its agent greet you first — so
+  // you arrive to a conversation already in motion instead of an empty panel.
+  const autoStarted = useRef(false)
+  useEffect(() => {
+    if (autoStarted.current) return
+    if (mode !== 'event' || !event?.isOnline || !myProfile) return
+    const npc = others.find(o => !o.live)
+    if (!npc) return
+    autoStarted.current = true
+    autoGreetPlaza(npc)
+    setSelectedKey(npc.pairKey)
+  }, [mode, event, myProfile, others, autoGreetPlaza])
 
   const selected = useMemo(
     () => others.find(o => o.pairKey === selectedKey),
