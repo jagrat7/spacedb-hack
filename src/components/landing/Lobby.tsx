@@ -120,7 +120,7 @@ function ProfileBarWithAuth({
 
 export function Lobby({ onEdit }: { onEdit: () => void }) {
   const navigate = useNavigate()
-  const { myProfile, events, myEvents, joinEvent } = useOverlapHome()
+  const { myProfile, events, myEvents, joinEvent, dataReady } = useOverlapHome()
 
   const [code, setCode] = useState('')
   const [joinError, setJoinError] = useState('')
@@ -211,13 +211,29 @@ export function Lobby({ onEdit }: { onEdit: () => void }) {
           >
             ▶ STEP INSIDE
           </Button>
-          {demo && (
-            <p className="text-center font-sans text-xs font-semibold text-wood2/70">
-              Tip: try code <span className="font-pixel">DEMO</span> — {demo.name}.
-            </p>
-          )}
+          <p className="text-center font-sans text-xs font-semibold text-wood2/70">
+            Tip: try{' '}
+            <span className="font-pixel">DEMO</span>
+            {demo ? ` — ${demo.name}` : ', AIHACK, or GAMEDEV'}.
+          </p>
         </div>
       </form>
+
+      {!dataReady && (
+        <p className="text-center font-sans text-sm font-semibold text-wood2">
+          Loading events…
+        </p>
+      )}
+
+      {dataReady && events.length === 0 && (
+        <div className="wood-panel mx-auto max-w-md p-4 text-center">
+          <p className="font-sans text-sm font-semibold text-wood2">
+            No events in the database yet. Run{' '}
+            <code className="font-mono text-xs">bun run scripts/seed-events.ts</code>{' '}
+            to seed demo events, or ask the host for an event code.
+          </p>
+        </div>
+      )}
 
       {/* my events — quest board */}
       {myEvents.length > 0 && (

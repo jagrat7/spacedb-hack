@@ -15,6 +15,7 @@ import type {
   Match,
   Profile,
 } from '../../module_bindings/types'
+import { queryClient } from '@/providers'
 import { runAgentReply, runMatch } from '@/server/match'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -88,8 +89,11 @@ function useOverlapSubscriptions() {
     if (!isActive) return
     const conn = getConnection() as DbConnection | null
     if (!conn) return
-    conn
+    const handle = conn
       .subscriptionBuilder()
+      .onApplied(() => {
+        void queryClient.invalidateQueries({ queryKey: ['spacetimedb'] })
+      })
       .subscribe([
         tables.profile,
         tables.event,
@@ -97,6 +101,7 @@ function useOverlapSubscriptions() {
         tables.match,
         tables.agentMessage,
       ])
+    return () => handle.unsubscribe()
   }, [isActive, getConnection])
 }
 
@@ -133,9 +138,9 @@ export function useOverlapHome() {
   const { identity, isActive } = useSpacetimeDB()
   useOverlapSubscriptions()
 
-  const [profiles] = useSpacetimeDBQuery(tables.profile)
-  const [events] = useSpacetimeDBQuery(tables.event)
-  const [attendees] = useSpacetimeDBQuery(tables.attendee)
+  const [profiles, profilesPending] = useSpacetimeDBQuery(tables.profile)
+  const [events, eventsPending] = useSpacetimeDBQuery(tables.event)
+  const [attendees, attendeesPending] = useSpacetimeDBQuery(tables.attendee)
 
   const myHex = identity?.toHexString()
   const myProfile = useMemo(
@@ -161,6 +166,7 @@ export function useOverlapHome() {
 
   return {
     connected: isActive && !!identity,
+    dataReady: !profilesPending && !eventsPending && !attendeesPending,
     myHex,
     myProfile,
     events,

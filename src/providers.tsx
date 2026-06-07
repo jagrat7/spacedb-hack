@@ -10,6 +10,7 @@ import { WebStorageStateStore } from 'oidc-client-ts';
 import {
   SpacetimeDBQueryClient,
   SpacetimeDBProvider,
+  useSpacetimeDB,
 } from 'spacetimedb/tanstack';
 import { DbConnection, ErrorContext } from './module_bindings';
 import { Button } from './components/ui/button';
@@ -72,11 +73,28 @@ spacetimeDBQueryClient.connect(queryClient);
 
 const onConnect = (conn: DbConnection, identity: Identity, _token: string) => {
   console.log('Connected to SpacetimeDB as', identity.toHexString());
-  spacetimeDBQueryClient.setConnection(conn);
 };
-const onDisconnect = () => console.log('Disconnected from SpacetimeDB');
+const onDisconnect = () => {
+  console.log('Disconnected from SpacetimeDB');
+  spacetimeDBQueryClient.disconnect();
+};
 const onConnectError = (_ctx: ErrorContext, err: Error) =>
   console.error('Error connecting to SpacetimeDB:', err);
+
+/** Wire the tanstack query client once the live connection is active. */
+function SpacetimeQueryBridge({ children }: { children: React.ReactNode }) {
+  const { isActive, getConnection } = useSpacetimeDB();
+
+  useEffect(() => {
+    if (!isActive) return;
+    const conn = getConnection() as DbConnection | null;
+    if (!conn) return;
+    spacetimeDBQueryClient.setConnection(conn);
+    void queryClient.invalidateQueries({ queryKey: ['spacetimedb'] });
+  }, [isActive, getConnection]);
+
+  return children;
+}
 
 // ── Auth gate + connection ──────────────────────────────────────────────────
 
@@ -103,7 +121,7 @@ function SpacetimeAnonymous({ children }: { children: React.ReactNode }) {
 
   return (
     <SpacetimeDBProvider connectionBuilder={connectionBuilder}>
-      {children}
+      <SpacetimeQueryBridge>{children}</SpacetimeQueryBridge>
     </SpacetimeDBProvider>
   );
 }
@@ -172,7 +190,7 @@ function SpacetimeWithAuth({ children }: { children: React.ReactNode }) {
 
   return (
     <SpacetimeDBProvider connectionBuilder={connectionBuilder}>
-      {children}
+      <SpacetimeQueryBridge>{children}</SpacetimeQueryBridge>
     </SpacetimeDBProvider>
   );
 }
