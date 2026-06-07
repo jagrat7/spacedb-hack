@@ -34,8 +34,10 @@ export function useRingSound(active: boolean) {
 
       const osc = ctx.createOscillator()
       osc.type = 'sine'
+      // Warble between two bright tones (~an octave above a classic phone ring)
+      // so it cuts through a noisy room.
       for (let t = 0; t < 1.2; t += 0.05) {
-        osc.frequency.setValueAtTime(Math.floor(t / 0.05) % 2 ? 480 : 440, now + t)
+        osc.frequency.setValueAtTime(Math.floor(t / 0.05) % 2 ? 990 : 880, now + t)
       }
       osc.connect(gain)
       osc.start(now)

@@ -193,7 +193,7 @@ function RingButton({ ring }: { ring: RingControl }) {
       <Button
         onClick={ring.onStop}
         title="Tap when you've found each other"
-        className={`${base} blink`}
+        className={base}
         style={{ background: 'linear-gradient(180deg,#8fd99b,#4e9e63)' }}
       >
         ✓ FOUND!
@@ -205,7 +205,7 @@ function RingButton({ ring }: { ring: RingControl }) {
       <Button
         onClick={ring.onAccept}
         title="They're ringing you — answer to start the beacon"
-        className={`${base} blink`}
+        className={base}
         style={{ background: 'linear-gradient(180deg,#F8CE6E,#EBA63A)' }}
       >
         🔔 ANSWER

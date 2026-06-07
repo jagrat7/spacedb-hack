@@ -501,7 +501,7 @@ function RingAlerts({
     <div className="flex shrink-0 flex-col gap-2">
       {activeRing && (
         <div
-          className="wood-panel blink flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+          className="wood-panel flex flex-wrap items-center justify-between gap-3 px-4 py-3"
           style={{ background: 'linear-gradient(180deg,#8fd99b,#4e9e63)' }}
         >
           <div className="flex min-w-0 items-center gap-2.5">
