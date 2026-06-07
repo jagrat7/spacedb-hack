@@ -79,6 +79,9 @@ export type Other = {
   profile: Profile
   pairKey: string
   match?: Match
+  // true when this attendee has a live presence row (a real, connected user
+  // walking their avatar). false for seeded NPCs that nobody is driving.
+  live: boolean
 }
 
 export type Facing = 'left' | 'right'
@@ -92,6 +95,9 @@ export type PlazaPerson = {
   isMe: boolean
   pairKey?: string
   match?: Match
+  // false for seeded NPCs (no live presence row); they wander client-side and
+  // pause when a real visitor stands next to them. Always true for `isMe`.
+  live: boolean
 }
 
 // ── Subscriptions ────────────────────────────────────────────────────────────
@@ -248,6 +254,17 @@ export function useEventRoom(eventIdStr: string) {
     return m
   }, [matches])
 
+  // Identities with a live presence row in this event — i.e. real, connected
+  // users driving their avatar. Anyone else (seeded NPCs) wanders client-side.
+  const liveHexes = useMemo(() => {
+    const s = new Set<string>()
+    if (eventId === null) return s
+    for (const p of presences) {
+      if (p.eventId === eventId) s.add(normHex(p.identity.toHexString()))
+    }
+    return s
+  }, [presences, eventId])
+
   const others = useMemo<Other[]>(() => {
     if (eventId === null || !myHex) return []
     const result: Other[] = []
@@ -260,10 +277,16 @@ export function useEventRoom(eventIdStr: string) {
       )
       if (!profile) continue
       const pairKey = pairKeyFor(eventId, myHex, otherHex)
-      result.push({ otherHex, profile, pairKey, match: matchByKey.get(pairKey) })
+      result.push({
+        otherHex,
+        profile,
+        pairKey,
+        match: matchByKey.get(pairKey),
+        live: liveHexes.has(normHex(otherHex)),
+      })
     }
     return result.sort((x, y) => (y.match?.score ?? -1) - (x.match?.score ?? -1))
-  }, [attendees, profiles, matchByKey, eventId, myHex])
+  }, [attendees, profiles, matchByKey, eventId, myHex, liveHexes])
 
   const profileByHex = useMemo(() => {
     const m = new Map<string, Profile>()
@@ -363,6 +386,7 @@ export function useEventRoom(eventIdStr: string) {
         profile: myProfile,
         spot: spotByHex.get(normHex(myHex)) ?? spawnSpot(myHex),
         isMe: true,
+        live: true,
       })
     }
     for (const o of others) {
@@ -373,6 +397,7 @@ export function useEventRoom(eventIdStr: string) {
         isMe: false,
         pairKey: o.pairKey,
         match: o.match,
+        live: o.live,
       })
     }
     return list

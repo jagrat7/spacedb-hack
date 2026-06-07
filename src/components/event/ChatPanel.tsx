@@ -13,6 +13,7 @@ export function ChatPanel({
   transcript,
   onSend,
   humanOnly = false,
+  autoDrive = false,
 }: {
   other: Profile
   me: Profile
@@ -21,8 +22,11 @@ export function ChatPanel({
   transcript: AgentMessage[]
   onSend: (text: string) => void
   humanOnly?: boolean
+  // Start in "speaking for yourself" mode (skip the SPEAK FOR YOURSELF button).
+  // Used for plaza chats with seeded NPCs: you talk, their agent replies.
+  autoDrive?: boolean
 }) {
-  const [driving, setDriving] = useState(humanOnly)
+  const [driving, setDriving] = useState(humanOnly || autoDrive)
   const [draft, setDraft] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)

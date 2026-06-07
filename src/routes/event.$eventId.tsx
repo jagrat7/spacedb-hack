@@ -228,16 +228,37 @@ function EventRoom() {
               className={`min-h-0 pb-0 lg:pb-2 ${mobilePane === 'main' ? 'hidden lg:block' : 'block'} ${selected && myProfile ? 'h-full min-h-[min(52dvh,28rem)] lg:min-h-0' : ''}`}
             >
               {selected && myProfile ? (
-                <ChatPanel
-                  key={selected.pairKey}
-                  other={selected.profile}
-                  me={myProfile}
-                  mySide={mySideFor(selected.otherHex)}
-                  streaming={false}
-                  humanOnly
-                  transcript={messagesByPair.get(selected.pairKey) ?? []}
-                  onSend={text => onSendDirectChat(selected.pairKey, text)}
-                />
+                selected.live ? (
+                  <ChatPanel
+                    key={selected.pairKey}
+                    other={selected.profile}
+                    me={myProfile}
+                    mySide={mySideFor(selected.otherHex)}
+                    streaming={false}
+                    humanOnly
+                    transcript={messagesByPair.get(selected.pairKey) ?? []}
+                    onSend={text => onSendDirectChat(selected.pairKey, text)}
+                  />
+                ) : (
+                  // Seeded NPC: no human on the other side, so their agent replies.
+                  <ChatPanel
+                    key={selected.pairKey}
+                    other={selected.profile}
+                    me={myProfile}
+                    mySide={mySideFor(selected.otherHex)}
+                    streaming={false}
+                    autoDrive
+                    transcript={messagesByPair.get(selected.pairKey) ?? []}
+                    onSend={text =>
+                      onSendChat(
+                        selected.pairKey,
+                        selected.otherHex,
+                        selected.profile,
+                        text
+                      )
+                    }
+                  />
+                )
               ) : (
                 <div className="wood-panel flex h-full min-h-[min(52dvh,28rem)] items-center justify-center lg:min-h-0">
                   <p className="font-pixel px-4 text-center text-base text-wood2">

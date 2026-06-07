@@ -16,6 +16,22 @@ const SEND_MS = 90 // throttle for updatePosition writes
 const LERP_SPEED = 18 // remote avatar interpolation (higher = snappier)
 const NEAR_PX = 96 // proximity radius (screen px) for the introduce prompt
 
+// Seeded NPC wander tuning. Seeded people (no live presence row) stroll around
+// on their own, client-side, and freeze when a real visitor stands next to them
+// so you can walk up and chat with their agent.
+const WANDER_SPEED = 0.085 // gentle stroll, slower than the player
+const WANDER_PAUSE_PX = 120 // freeze when the player is this close (in px)
+const WANDER_MIN_X = 0.1
+const WANDER_MAX_X = 0.9
+const WANDER_MIN_Y = 0.16
+const WANDER_MAX_Y = 0.86
+const WANDER_ARRIVE = 0.012 // "close enough" to the target to stop & dwell
+const WANDER_DWELL_MIN = 500 // ms paused at a target before picking a new one
+const WANDER_DWELL_VAR = 2000 // + up to this many ms
+
+// A rendered avatar position; `walking` drives the little walk-cycle animation.
+type Disp = { x: number; y: number; facing: Facing; walking?: boolean }
+
 // Cozy avatar palettes, picked deterministically from identity.
 const HAIR = ['#7a4f2a', '#3a2c22', '#C77F22', '#e0a96d', '#9b5a3c', '#4e3b2a', '#d98f4e']
 const TUNIC = ['#82C58C', '#EBA63A', '#E597B0', '#7fb8dd', '#b58bd6', '#5fae6e', '#f0a868']
@@ -415,6 +431,9 @@ export function Plaza({
 
   const keys = useRef(new Set<string>())
   const [walking, setWalking] = useState(false)
+  // Whether the plaza has keyboard focus — i.e. you're "in the game" and the
+  // arrow/WASD controls are live. Drives the highlight border on the whole box.
+  const [focused, setFocused] = useState(false)
   const [nearHex, setNearHex] = useState<string | null>(null)
   const nearHexRef = useRef<string | null>(null)
   nearHexRef.current = nearHex
@@ -431,23 +450,39 @@ export function Plaza({
   onMoveRef.current = onMove
 
   // Remote players: network updates arrive ~10/sec; interpolate between them.
-  const remoteDisplayRef = useRef(new Map<string, { x: number; y: number; facing: Facing }>())
+  // `display` holds the rendered position for every other person (live + seeded).
+  const remoteDisplayRef = useRef(new Map<string, Disp>())
+  // Interpolation targets for *live* others only (their real backend presence).
   const remoteTargetsRef = useRef(new Map<string, { x: number; y: number; facing: Facing }>())
-  const [remoteSpots, setRemoteSpots] = useState(
-    () => new Map<string, { x: number; y: number; facing: Facing }>()
-  )
+  // Wander targets for *seeded* NPCs (client-side stroll, not synced anywhere).
+  const wanderRef = useRef(new Map<string, { tx: number; ty: number; pauseUntil: number }>())
+  const [remoteSpots, setRemoteSpots] = useState(() => new Map<string, Disp>())
 
   useEffect(() => {
+    // Live others are interpolated toward their authoritative backend spot.
     const targets = new Map<string, { x: number; y: number; facing: Facing }>()
-    for (const p of others) targets.set(p.hex, p.spot)
+    for (const p of others) if (p.live) targets.set(p.hex, p.spot)
     remoteTargetsRef.current = targets
 
     const display = remoteDisplayRef.current
+    const allHexes = new Set(others.map(p => p.hex))
     for (const hex of [...display.keys()]) {
-      if (!targets.has(hex)) display.delete(hex)
+      if (!allHexes.has(hex)) display.delete(hex)
     }
-    for (const [hex, spot] of targets) {
-      if (!display.has(hex)) display.set(hex, spot)
+    for (const p of others) {
+      if (!display.has(p.hex)) display.set(p.hex, p.spot)
+    }
+
+    // Seeded NPCs (no live presence) get a client-side wander target.
+    const wander = wanderRef.current
+    const seeded = new Set(others.filter(p => !p.live).map(p => p.hex))
+    for (const hex of [...wander.keys()]) {
+      if (!seeded.has(hex)) wander.delete(hex)
+    }
+    for (const p of others) {
+      if (p.live) wander.delete(p.hex)
+      else if (!wander.has(p.hex))
+        wander.set(p.hex, { tx: p.spot.x, ty: p.spot.y, pauseUntil: 0 })
     }
   }, [others])
 
@@ -575,6 +610,55 @@ export function Plaza({
         })
         remoteDirty = true
       }
+
+      // seeded NPCs wander on their own; they freeze & turn to face me when I
+      // stand next to them, so I can walk up and chat with their agent.
+      const meNow = myPosRef.current
+      const { w: bw, h: bh } = dims.current
+      const wander = wanderRef.current
+      for (const [hex, st] of wander) {
+        const cur = display.get(hex)
+        if (!cur) continue
+        const px = (cur.x - meNow.x) * bw
+        const py = (cur.y - meNow.y) * bh
+        if (Math.hypot(px, py) < WANDER_PAUSE_PX) {
+          // paused next to the visitor — stop walking and turn toward them
+          const facing: Facing = meNow.x < cur.x ? 'left' : 'right'
+          if (cur.walking || cur.facing !== facing) {
+            display.set(hex, { x: cur.x, y: cur.y, facing, walking: false })
+            remoteDirty = true
+          }
+          continue
+        }
+        if (now < st.pauseUntil) {
+          if (cur.walking) {
+            display.set(hex, { ...cur, walking: false })
+            remoteDirty = true
+          }
+          continue
+        }
+        const tdx = st.tx - cur.x
+        const tdy = st.ty - cur.y
+        if (Math.hypot(tdx, tdy) < WANDER_ARRIVE) {
+          // arrived: dwell a beat, then head somewhere new
+          st.pauseUntil = now + WANDER_DWELL_MIN + Math.random() * WANDER_DWELL_VAR
+          st.tx = WANDER_MIN_X + Math.random() * (WANDER_MAX_X - WANDER_MIN_X)
+          st.ty = WANDER_MIN_Y + Math.random() * (WANDER_MAX_Y - WANDER_MIN_Y)
+          if (cur.walking) {
+            display.set(hex, { ...cur, walking: false })
+            remoteDirty = true
+          }
+          continue
+        }
+        const tlen = Math.hypot(tdx, tdy) || 1
+        const nx = clamp(cur.x + (tdx / tlen) * WANDER_SPEED * dt)
+        const ny = clamp(cur.y + (tdy / tlen) * WANDER_SPEED * dt)
+        const facing: Facing =
+          tdx < -0.0008 ? 'left' : tdx > 0.0008 ? 'right' : cur.facing
+        display.set(hex, { x: nx, y: ny, facing, walking: true })
+        remoteDirty = true
+      }
+
       if (remoteDirty) setRemoteSpots(new Map(display))
 
       // proximity: nearest other in screen px (use interpolated positions)
@@ -609,7 +693,9 @@ export function Plaza({
     <div
       ref={boxRef}
       tabIndex={0}
-      className="relative h-full w-full overflow-hidden outline-none select-none"
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      className="relative h-full w-full overflow-hidden outline-none select-none transition-shadow duration-200"
       style={{
         borderRadius: 8,
         background: `url(${PLAZA_BG}) center / cover no-repeat,
@@ -618,19 +704,24 @@ export function Plaza({
           radial-gradient(70px 70px at 60% 22%, rgba(95,150,90,0.3), transparent 70%),
           repeating-linear-gradient(45deg, rgba(120,160,110,0.12) 0 22px, rgba(150,185,135,0.12) 22px 44px),
           radial-gradient(120% 90% at 50% 0%, #a9d18a, #8fc486 55%, #6fb56e 100%)`,
-        boxShadow: 'inset 0 0 0 3px rgba(58,44,34,0.5), inset 0 0 60px rgba(40,28,16,0.35)',
+        // When focused ("in the game"), wrap the whole component in a glowing
+        // gold ring so it's obvious the keyboard controls are live.
+        boxShadow: focused
+          ? '0 0 0 3px var(--gold), 0 0 0 6px rgba(235,166,58,0.35), 0 0 22px rgba(235,166,58,0.55), inset 0 0 0 3px rgba(58,44,34,0.5), inset 0 0 60px rgba(40,28,16,0.35)'
+          : '0 0 0 2px rgba(58,44,34,0.35), inset 0 0 0 3px rgba(58,44,34,0.5), inset 0 0 60px rgba(40,28,16,0.35)',
       }}
     >
       {/* decorative village (paths, houses, trees, fountain) — below avatars */}
       <VillageScene />
 
       {others.map(p => {
-        const spot = remoteSpots.get(p.hex) ?? p.spot
+        const disp = remoteSpots.get(p.hex)
+        const spot = disp ?? p.spot
         return (
           <Avatar
             key={p.hex}
             person={{ ...p, spot }}
-            walking={false}
+            walking={disp?.walking ?? false}
             selected={!!p.pairKey && p.pairKey === selectedKey}
             onClick={() => onTalkTo(p)}
           />
@@ -646,26 +737,26 @@ export function Plaza({
         />
       )}
 
-      {/* chat prompt floating above the nearest neighbour */}
+      {/* chat prompt below the nearest neighbour — name stays on avatar above */}
       {nearPerson && nearSpot && (
         <div
-          className="av-prompt pointer-events-auto absolute z-20"
+          className="pointer-events-auto absolute z-20 -translate-x-1/2"
           style={{
             left: `${nearSpot.x * 100}%`,
-            top: `calc(${nearSpot.y * 100}% - 64px)`,
+            top: `calc(${nearSpot.y * 100}% + 36px)`,
           }}
         >
           <button
             type="button"
             onClick={() => onTalkTo(nearPerson)}
-            className="btn3d font-pixel whitespace-nowrap border-[3px] border-wood px-3 py-1.5 text-sm text-wood shadow-[0_3px_0_#2A1F18]"
+            className="av-prompt btn3d font-pixel whitespace-nowrap border-2 border-wood px-2.5 py-1 text-[11px] text-wood shadow-[0_2px_0_#2A1F18]"
             style={{
               background: 'linear-gradient(180deg,#F8CE6E,#EBA63A)',
-              borderRadius: 8,
+              borderRadius: 6,
             }}
           >
             ✦ Chat
-            <span className="ml-1.5 opacity-70">↵</span>
+            <span className="ml-1 opacity-60">↵</span>
           </button>
         </div>
       )}
