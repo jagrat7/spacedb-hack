@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 import { useAuth } from 'react-oidc-context'
-import { AUTH_DISABLED } from '@/lib/auth-config'
+import { isAuthDisabled } from '@/lib/auth-config'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Leaf, LeafSpray, Sparkles } from '@/components/cozy'
@@ -156,7 +156,7 @@ export function Lobby({ onEdit }: { onEdit: () => void }) {
       {/* header */}
       <header className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Signboard />
-        {AUTH_DISABLED ? (
+        {isAuthDisabled() ? (
           <ProfileBar
             name={myProfile?.name ?? ''}
             role={myProfile?.goals ?? ''}

@@ -13,7 +13,7 @@ import {
 } from 'spacetimedb/tanstack';
 import { DbConnection, ErrorContext } from './module_bindings';
 import { Button } from './components/ui/button';
-import { AUTH_DISABLED } from './lib/auth-config';
+import { clearOidcStorage, isAuthDisabled } from './lib/auth-config';
 
 const HOST =
   import.meta.env.VITE_SPACETIMEDB_HOST ?? 'wss://maincloud.spacetimedb.com';
@@ -184,7 +184,10 @@ function SpacetimeWithAuth({ children }: { children: React.ReactNode }) {
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    if (isAuthDisabled()) clearOidcStorage();
+    setMounted(true);
+  }, []);
 
   if (!mounted) {
     return (
@@ -194,7 +197,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (AUTH_DISABLED) {
+  if (isAuthDisabled()) {
     return <SpacetimeAnonymous>{children}</SpacetimeAnonymous>;
   }
 
