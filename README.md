@@ -1,144 +1,61 @@
-Get a SpacetimeDB app with TanStack Start running in under 5 minutes.
+# Vibe Check
 
-## Prerequisites
+**Connect agents, not LinkedIns.** An AI-agent networking app for events, built on SpacetimeDB.
 
-- [Node.js](https://nodejs.org/) 18+ installed
-- [SpacetimeDB CLI](https://spacetimedb.com/install) installed
+🔗 [Live demo](https://spacetime-hack.vercel.app/) 
 
-Install the [SpacetimeDB CLI](https://spacetimedb.com/install) before continuing.
+## What it is
+Networking at events is inefficient: you meet people at random, burn time on small talk, and "let's connect on LinkedIn" rarely leads anywhere. Vibe Check pre-screens so your conversations start deep instead of cold.
 
----
-
-## Create your project
-
-Run the `spacetime dev` command to create a new project with a SpacetimeDB module and TanStack Start.
-
-This will start the local SpacetimeDB server, publish your module, generate TypeScript bindings, and start the development server.
-
-```bash
-spacetime dev --template tanstack-ts
-```
+At an event, your agent talks to other attendees' agents, finds common ground, and tells you who to meet — with a match score, a "why you should meet" summary, and icebreakers. Take over the conversation live at any time to talk as yourself. Instead of "add me on LinkedIn," you connect agents.
 
 
+## Two modes
 
-## Open your app
+- **Offline event** — agents pre-screen beforehand; you arrive knowing who to find and what to talk about, with a summary scoreboard.
+- **Online event** — fully virtual; your agent does the legwork and you take over the chat the moment you feel a spark.
 
-Navigate to [http://localhost:5173](http://localhost:5173) to see your app running.
+## How it works
 
-The template includes a TanStack Start app with TanStack Query integration with SpacetimeDB.
+1. Build your agent (role, what you're working on, interests, what you're looking for/offer).
+2. Join the event.
+3. Your agent meets other attendees' agents.
+4. Match cards appear on a live shared board — score, sub-metrics, summary, common ground, icebreakers.
 
+**Offline:** review cards → walk up to a high-scoring match at the venue → the primed in-person conversation is the connection.
+**Online:** click a match's avatar in the plaza → open the live agent chat → take over to talk as yourself.
 
+### The plaza (online events only)
 
-## Explore the project structure
-
-Your project contains both server and client code.
-
-Edit `spacetimedb/src/index.ts` to add tables and reducers. Edit `src/routes/index.tsx` to build your UI.
-
-```
-my-spacetime-app/
-├── spacetimedb/          # Your SpacetimeDB module
-│   └── src/
-│       └── index.ts      # Server-side logic
-├── src/                  # TanStack Start frontend
-│   ├── router.tsx        # QueryClient + SpacetimeDB setup
-│   ├── routes/
-│   │   ├── __root.tsx    # Root layout
-│   │   └── index.tsx     # Main app component
-│   └── module_bindings/  # Auto-generated types
-└── package.json
-```
+A top-down, game-like space where attendees appear as avatars moving in real time. Click an avatar to connect; high-scoring matches show a glowing line — the room's match graph made visible.
 
 
-
-## Understand tables and reducers
-
-Open `spacetimedb/src/index.ts` to see the module code. The template includes a `person` table and two reducers: `add` to insert a person, and `sayHello` to greet everyone.
-
-Tables store your data. Reducers are functions that modify data — they're the only way to write to the database.
-
-```typescript
-import { schema, table, t } from 'spacetimedb/server';
-
-const spacetimedb = schema({
-  person: table(
-    { public: true },
-    {
-      name: t.string(),
-    }
-  ),
-});
-export default spacetimedb;
-
-export const add = spacetimedb.reducer(
-  { name: t.string() },
-  (ctx, { name }) => {
-    ctx.db.person.insert({ name });
-  }
-);
-
-export const sayHello = spacetimedb.reducer(ctx => {
-  for (const person of ctx.db.person.iter()) {
-    console.info(`Hello, ${person.name}!`);
-  }
-  console.info('Hello, World!');
-});
-```
+## Tech stack
 
 
+| Layer        | Tech                                         |
+| ------------ | -------------------------------------------- |
+| Backend      | SpacetimeDB module — tables + reducers          |
+| Web client   | React + TanStack Start + Vite + TypeScript      |
+| Matching     | TanStack Start server function (`src/server/`)  |
+| LLM          | OpenRouter                                       |
+| Hosting      | Vercel                                           |
 
-## Test with the CLI
 
-Open a new terminal and navigate to your project directory. Then use the SpacetimeDB CLI to call reducers and query your data directly.
+## Running locally
 
 ```bash
-cd my-spacetime-app
+# 1. Install the SpacetimeDB CLI: https://spacetimedb.com/install
 
-# Call the add reducer to insert a person
-spacetime call add Alice
+# 2. Install deps, then create .env with OPENROUTER_API_KEY,
+#    OPENROUTER_MODEL, and SPACETIMEDB_HOST / SPACETIMEDB_DB_NAME (+ VITE_ equivalents)
+bun install
 
-# Query the person table
-spacetime sql "SELECT * FROM person"
- name
----------
- "Alice"
+# 3. Publish the SpacetimeDB module (database: "overlap")
+bun run spacetime:publish        # maincloud
+# bun run spacetime:publish:local  # against a local `spacetime start`
 
-# Call sayHello to greet everyone
-spacetime call say_hello
-
-# View the module logs
-spacetime logs
-2025-01-13T12:00:00.000000Z  INFO: Hello, Alice!
-2025-01-13T12:00:00.000000Z  INFO: Hello, World!
+# 4. Run the app (web client + matching server fn)
+bun run dev
 ```
 
-
-
-## Query and update data
-
-Use `useSpacetimeDBQuery()` to subscribe to tables with TanStack Query — it returns `[data, loading, query]`. SpacetimeDB React hooks also work with TanStack Start.
-
-```typescript
-import { useSpacetimeDBQuery, useReducer } from 'spacetimedb/tanstack';
-import { tables, reducers } from '../module_bindings';
-
-function App() {
-  const [people, loading] = useSpacetimeDBQuery(tables.person);
-  const addPerson = useReducer(reducers.add);
-
-  if (loading) return <p>Loading...</p>;
-
-  return (
-    <ul>
-      {people.map((person, i) => (
-        <li key={i}>{person.name}</li>
-      ))}
-    </ul>
-  );
-}
-````
-
-## Next steps
-
-- See the [Chat App Tutorial](https://spacetimedb.com/docs/intro/tutorials/chat-app) for a complete example
-- Read the [TypeScript SDK Reference](https://spacetimedb.com/docs/intro/core-concepts/clients/typescript-reference) for detailed API docs
