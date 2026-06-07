@@ -13,6 +13,7 @@ const PLAZA_BG = '/plaza.png'
 const SPEED = 0.34 // fraction of the plaza crossed per second
 const EDGE = 0.045 // keep the avatar's body fully inside the frame
 const SEND_MS = 90 // throttle for updatePosition writes
+const LERP_SPEED = 18 // remote avatar interpolation (higher = snappier)
 const NEAR_PX = 96 // proximity radius (screen px) for the introduce prompt
 
 // Cozy avatar palettes, picked deterministically from identity.
@@ -429,6 +430,27 @@ export function Plaza({
   const onMoveRef = useRef(onMove)
   onMoveRef.current = onMove
 
+  // Remote players: network updates arrive ~10/sec; interpolate between them.
+  const remoteDisplayRef = useRef(new Map<string, { x: number; y: number; facing: Facing }>())
+  const remoteTargetsRef = useRef(new Map<string, { x: number; y: number; facing: Facing }>())
+  const [remoteSpots, setRemoteSpots] = useState(
+    () => new Map<string, { x: number; y: number; facing: Facing }>()
+  )
+
+  useEffect(() => {
+    const targets = new Map<string, { x: number; y: number; facing: Facing }>()
+    for (const p of others) targets.set(p.hex, p.spot)
+    remoteTargetsRef.current = targets
+
+    const display = remoteDisplayRef.current
+    for (const hex of [...display.keys()]) {
+      if (!targets.has(hex)) display.delete(hex)
+    }
+    for (const [hex, spot] of targets) {
+      if (!display.has(hex)) display.set(hex, spot)
+    }
+  }, [others])
+
   // Measure the plaza box for px-accurate proximity (the box isn't square).
   useEffect(() => {
     const measure = () => {
@@ -525,14 +547,45 @@ export function Plaza({
         }
       }
 
-      // proximity: nearest other in screen px
+      // interpolate remote avatars toward latest presence targets
+      const targets = remoteTargetsRef.current
+      const display = remoteDisplayRef.current
+      let remoteDirty = false
+      const alpha = 1 - Math.exp(-LERP_SPEED * dt)
+
+      for (const [hex, target] of targets) {
+        const cur = display.get(hex) ?? target
+        const dx = target.x - cur.x
+        const dy = target.y - cur.y
+        if (Math.abs(dx) < 0.00005 && Math.abs(dy) < 0.00005) {
+          if (
+            cur.x !== target.x ||
+            cur.y !== target.y ||
+            cur.facing !== target.facing
+          ) {
+            display.set(hex, target)
+            remoteDirty = true
+          }
+          continue
+        }
+        display.set(hex, {
+          x: cur.x + dx * alpha,
+          y: cur.y + dy * alpha,
+          facing: target.facing,
+        })
+        remoteDirty = true
+      }
+      if (remoteDirty) setRemoteSpots(new Map(display))
+
+      // proximity: nearest other in screen px (use interpolated positions)
       const { w, h } = dims.current
       const cur = myPosRef.current
       let bestHex: string | null = null
       let bestD = NEAR_PX
       for (const p of othersRef.current) {
-        const ddx = (p.spot.x - cur.x) * w
-        const ddy = (p.spot.y - cur.y) * h
+        const spot = display.get(p.hex) ?? p.spot
+        const ddx = (spot.x - cur.x) * w
+        const ddy = (spot.y - cur.y) * h
         const d = Math.hypot(ddx, ddy)
         if (d < bestD) {
           bestD = d
@@ -548,6 +601,9 @@ export function Plaza({
   }, [])
 
   const nearPerson = nearHex ? others.find(p => p.hex === nearHex) : undefined
+  const nearSpot = nearPerson
+    ? (remoteSpots.get(nearPerson.hex) ?? nearPerson.spot)
+    : null
 
   return (
     <div
@@ -568,15 +624,18 @@ export function Plaza({
       {/* decorative village (paths, houses, trees, fountain) — below avatars */}
       <VillageScene />
 
-      {others.map(p => (
-        <Avatar
-          key={p.hex}
-          person={p}
-          walking={false}
-          selected={!!p.pairKey && p.pairKey === selectedKey}
-          onClick={() => onTalkTo(p)}
-        />
-      ))}
+      {others.map(p => {
+        const spot = remoteSpots.get(p.hex) ?? p.spot
+        return (
+          <Avatar
+            key={p.hex}
+            person={{ ...p, spot }}
+            walking={false}
+            selected={!!p.pairKey && p.pairKey === selectedKey}
+            onClick={() => onTalkTo(p)}
+          />
+        )
+      })}
 
       {me && (
         <Avatar
@@ -588,12 +647,12 @@ export function Plaza({
       )}
 
       {/* chat prompt floating above the nearest neighbour */}
-      {nearPerson && (
+      {nearPerson && nearSpot && (
         <div
           className="av-prompt pointer-events-auto absolute z-20"
           style={{
-            left: `${nearPerson.spot.x * 100}%`,
-            top: `calc(${nearPerson.spot.y * 100}% - 64px)`,
+            left: `${nearSpot.x * 100}%`,
+            top: `calc(${nearSpot.y * 100}% - 64px)`,
           }}
         >
           <button
