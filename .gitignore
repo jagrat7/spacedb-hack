@@ -10,3 +10,16 @@ dist
 
 spacetime.local.json
 .vercel
+
+# docs media assets (except vibe-check.gif)
+docs/IMG_3473.MOV
+docs/final-music-on-slideshow.mp4
+docs/final-music-on-vibecheck.mp4
+docs/image2.jpg
+docs/octosound-chill-synthwave-377173.mp3
+docs/palette.png
+docs/slideshow-music-even.mp4
+docs/slideshow-music-weighted.mp4
+docs/slideshow.mp4
+docs/spacetimehack.jpg
+docs/vibe-check.mp4
