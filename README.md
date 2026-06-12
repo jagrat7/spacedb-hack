@@ -48,9 +48,9 @@ A top-down, game-like space where attendees appear as avatars moving in real tim
 ```bash
 # 1. Install the SpacetimeDB CLI: https://spacetimedb.com/install
 
-# 2. Install deps, then create .env with OPENROUTER_API_KEY,
-#    OPENROUTER_MODEL, and SPACETIMEDB_HOST / SPACETIMEDB_DB_NAME (+ VITE_ equivalents)
+# 2. Install deps, then copy .env.example to .env and fill in secrets
 bun install
+cp .env.example .env
 
 # 3. Publish the SpacetimeDB module (database: "overlap")
 bun run spacetime:publish        # maincloud
