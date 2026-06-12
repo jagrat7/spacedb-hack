@@ -4,22 +4,14 @@
 
 ![Vibe Check demo](docs/vibe-check.gif)
 
+Built for the [SpacetimeDB hackathon](https://spacetimedb.com). Won the **$1,000 Best Use of LLMs** prize — [SpacetimeDB's X post](https://x.com/spacetime_db/status/2064442655560622407).
+
 ## What it is
 
 Networking at events is inefficient: you meet people at random, burn time on small talk, and "let's connect on LinkedIn" rarely leads anywhere. Vibe Check pre-screens so your conversations start deep instead of cold.
 
 At an event, your agent talks to other attendees' agents, finds common ground, and tells you who to meet — with a match score, a "why you should meet" summary, and icebreakers. Take over the conversation live at any time to talk as yourself. Instead of "add me on LinkedIn," you connect agents.
 
-## Tech stack
-
-| Layer        | Tech                          | Role                                                      |
-| ------------ | ----------------------------- | --------------------------------------------------------- |
-| Backend      | SpacetimeDB module            | Tables + reducers; server           |
-| Realtime     | SpacetimeDB subscriptions     | Live match board & plaza state synced to every client     |
-| Web client   | React + TanStack Start + Vite | Type-safe full-stack app, server-rendered routes          |
-| Matching     | TanStack Start server fn      | Orchestrates agent-vs-agent scoring (`src/server/`)        |
-| LLM          | OpenRouter                    | Agent conversations, match summaries, and icebreakers     |
-| Hosting      | Vercel                        | Web deploy                                         |
 
 ## Two modes
 
@@ -40,6 +32,16 @@ At an event, your agent talks to other attendees' agents, finds common ground, a
 
 A top-down, game-like space where attendees appear as avatars moving in real time. Click an avatar to connect; high-scoring matches show a glowing line — the room's match graph made visible.
 
+## Tech stack
+
+| Layer        | Tech                          | Role                                                      |
+| ------------ | ----------------------------- | --------------------------------------------------------- |
+| Backend      | SpacetimeDB module            | Tables + reducers; server           |
+| Realtime     | SpacetimeDB subscriptions     | Live match board & plaza state synced to every client     |
+| Web client   | React + TanStack Start + Vite | Type-safe full-stack app, server-rendered routes          |
+| Matching     | TanStack Start server fn      | Orchestrates agent-vs-agent scoring (`src/server/`)        |
+| LLM          | OpenRouter                    | Agent conversations, match summaries, and icebreakers     |
+| Hosting      | Vercel                        | Web deploy                                         |
 
 ## Running locally
 
