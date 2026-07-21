@@ -1,0 +1,14 @@
+{
+  "title": "vibe-check",
+  "description": "SpacetimeDB Hackathon winner for Best Use of LLMs 🏆 — app that gamifies networking events. Set up agents that talk to other people's agents, score the \"vibe,\" and find who's the coolest at the event.",
+  "tags": [
+    "TypeScript",
+    "SpacetimeDB",
+    "LLMs"
+  ],
+  "order": 3,
+  "image": "docs/vibe-check.gif",
+  "images": [
+    "docs/vibe-check.gif"
+  ]
+}
