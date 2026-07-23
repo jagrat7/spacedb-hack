@@ -10,5 +10,6 @@
   "image": "docs/vibe-check.gif",
   "images": [
     "docs/vibe-check.gif"
-  ]
+  ],
+  "type": "web"
 }
